@@ -226,7 +226,7 @@ async function runwayPollTask(taskId, { intervalMs = 4000, maxMs = 240000 } = {}
 async function toolGenerateImage({ prompt, ratio = '1280:720' }) {
   const created = await runwayCreateTask({
     endpoint: 'text_to_image',
-    payload: { promptText: prompt, model: 'gen4_image_turbo', ratio },
+    payload: { promptText: prompt, model: 'gen4_image_turbo', ratio, referenceImages: [] },
   });
   const done = await runwayPollTask(created.id);
   const url = done.output && done.output[0];
