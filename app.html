@@ -449,6 +449,7 @@ function handleEvent(event, payload){
     if (payload.text) {
       const node = renderResultBox({ kind: "text", text: payload.text, label: "Mini-Me summary" });
       results.appendChild(node);
+      addArtifact({ kind: "text", label: "Summary: " + (window.__lastUserPrompt || "").slice(0, 60), text: payload.text });
     }
     return;
   }
