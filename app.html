@@ -61,6 +61,44 @@
   }
   .brb:hover{transform:translateY(-2px);box-shadow:0 24px 70px rgba(225,6,0,.55), inset 0 -10px 30px rgba(0,0,0,.45)}
   .brb:active{transform:translateY(2px);box-shadow:0 8px 20px rgba(225,6,0,.45), inset 0 -6px 20px rgba(0,0,0,.55)}
+
+  .brb.listening {
+    transform: translateY(4px);
+    background: radial-gradient(circle at 35% 30%, #ff8a85 0%, #ff2a1f 45%, #6b0300 100%);
+    box-shadow:
+      0 4px 14px rgba(225,6,0,.55),
+      inset 0 -8px 24px rgba(0,0,0,.65),
+      0 0 0 4px rgba(225,6,0,.25),
+      0 0 0 12px rgba(225,6,0,.12),
+      0 0 60px rgba(255,42,31,.5);
+    animation: pulseListening 1.6s ease-in-out infinite;
+    cursor: pointer;
+    position: relative;
+  }
+  @keyframes pulseListening {
+    0%,100% { transform: translateY(4px) scale(1); filter: brightness(1.0); }
+    50%     { transform: translateY(4px) scale(1.015); filter: brightness(1.12); }
+  }
+  .brb.listening::before {
+    content: '● LISTENING';
+    position: absolute;
+    top: -34px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    letter-spacing: .18em;
+    color: #ff6b65;
+    font-family: var(--mono);
+    white-space: nowrap;
+    text-shadow: 0 0 8px rgba(255,42,31,.6);
+  }
+  .brb.firing {
+    transform: translateY(2px);
+    opacity: .85;
+    cursor: wait;
+    animation: none;
+  }
+
   .brb[disabled]{opacity:.7;cursor:wait}
   .hint{color:var(--muted);font-size:12.5px;text-align:center;max-width:420px;line-height:1.5}
 
@@ -557,7 +595,118 @@ async function runAgent(opts){
   }
 }
 
-goBtn.addEventListener("click", () => runAgent({}));
+// === PRESS-TO-TALK: Web Speech API integration ===
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let __mode = "idle"; // "idle" | "listening" | "firing"
+let __recognition = null;
+let __silenceTimer = null;
+const __SILENCE_MS = 1500;
+
+function __setBtn(text, cls) {
+  goBtn.textContent = text;
+  goBtn.classList.remove("listening","firing");
+  if (cls) goBtn.classList.add(cls);
+}
+
+function __startListening() {
+  if (!SR) {
+    toast("Voice not supported in this browser. Type your prompt and click again.");
+    promptEl.focus();
+    return;
+  }
+  if (location.protocol !== "https:" && location.hostname !== "localhost") {
+    toast("Voice requires HTTPS.");
+    return;
+  }
+  __mode = "listening";
+  __setBtn("LISTENING", "listening");
+  hint.textContent = "Speak your outcome. I'll fire when you pause.";
+  promptEl.value = "";
+  promptEl.dataset.finalTranscript = "";
+
+  try {
+    __recognition = new SR();
+  } catch (e) {
+    toast("Mic init failed: " + e.message);
+    __cancelListening();
+    return;
+  }
+  __recognition.continuous = true;
+  __recognition.interimResults = true;
+  __recognition.lang = "en-US";
+
+  __recognition.onresult = (event) => {
+    let interim = "";
+    let finalAdd = "";
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const res = event.results[i];
+      if (res.isFinal) finalAdd += res[0].transcript + " ";
+      else interim += res[0].transcript;
+    }
+    if (finalAdd) {
+      promptEl.dataset.finalTranscript = (promptEl.dataset.finalTranscript || "") + finalAdd;
+    }
+    promptEl.value = ((promptEl.dataset.finalTranscript || "") + interim).trim();
+    if (__silenceTimer) clearTimeout(__silenceTimer);
+    __silenceTimer = setTimeout(() => { if (__mode === "listening") __stopAndFire(); }, __SILENCE_MS);
+  };
+  __recognition.onerror = (event) => {
+    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
+      toast("Mic permission denied. Allow it in browser settings.");
+    } else if (event.error === "no-speech") {
+      toast("No speech detected.");
+    } else if (event.error !== "aborted") {
+      toast("Speech error: " + event.error);
+    }
+    __cancelListening();
+  };
+  __recognition.onend = () => {
+    if (__mode === "listening") {
+      if ((promptEl.value || "").trim().length > 0) __stopAndFire();
+      else __cancelListening();
+    }
+  };
+  try { __recognition.start(); }
+  catch (e) { toast("Mic start failed: " + e.message); __cancelListening(); }
+}
+
+function __cancelListening() {
+  if (__silenceTimer) { clearTimeout(__silenceTimer); __silenceTimer = null; }
+  if (__recognition) { try { __recognition.abort(); } catch {} __recognition = null; }
+  __mode = "idle";
+  __setBtn("PRESS THE BUTTON");
+  hint.textContent = "Click to talk. Or type and press Cmd/Ctrl+Enter.";
+  promptEl.dataset.finalTranscript = "";
+}
+
+function __stopAndFire() {
+  if (__silenceTimer) { clearTimeout(__silenceTimer); __silenceTimer = null; }
+  if (__recognition) { try { __recognition.stop(); } catch {} __recognition = null; }
+  if (!(promptEl.value || "").trim()) { __cancelListening(); return; }
+  __mode = "firing";
+  __setBtn("WORKING…", "firing");
+  hint.textContent = "Mini-Me is on it.";
+  promptEl.dataset.finalTranscript = "";
+  Promise.resolve(runAgent({})).finally(() => {
+    __mode = "idle";
+    __setBtn("PRESS THE BUTTON");
+    hint.textContent = "Click to talk. Or type and press Cmd/Ctrl+Enter.";
+  });
+}
+
+goBtn.addEventListener("click", (e) => {
+  // Cmd/Ctrl+click bypasses voice, fires whatever is in the textarea
+  if (e.metaKey || e.ctrlKey) { runAgent({}); return; }
+  if (__mode === "listening") { __stopAndFire(); return; }
+  if (__mode === "firing") return;
+  // idle: if textarea has typed content, fire it; otherwise start mic
+  if ((promptEl.value || "").trim().length > 0) { runAgent({}); return; }
+  __startListening();
+});
+
+// Set initial hint
+hint.textContent = "Click to talk. Or type and press Cmd/Ctrl+Enter.";
+if (!SR) hint.textContent = "Voice not supported in this browser. Type and press Cmd/Ctrl+Enter.";
 $("#goFollowup").addEventListener("click", () => runAgent({ isFollowup: true }));
 promptEl.addEventListener("keydown", e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") runAgent({}); });
 followupEl.addEventListener("keydown", e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") runAgent({ isFollowup: true }); });
