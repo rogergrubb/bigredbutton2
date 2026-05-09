@@ -157,10 +157,12 @@
   <header>
     <div class="brand">BIG <b>RED</b> BUTTON <span class="tag live">v0.2 · live</span></div>
     <nav>
+      <a href="#" id="exportBtn" title="Download conversation as JSON">⤓ Export</a>
       <a href="#" id="resetBtn" title="Clear conversation, results, and gallery">↺ Reset</a>
       <a href="#" id="helpBtn" title="What is Big Red Button?">? Help</a>
       <a href="/">Home</a>
       <a href="/showcase">Showcase</a>
+      <a href="/manifesto">Manifesto</a>
       <a href="https://github.com/rogergrubb/bigredbutton2" target="_blank" rel="noopener">GitHub</a>
     </nav>
   </header>
@@ -588,6 +590,25 @@ document.getElementById("introPlay")?.addEventListener("click", async (e) => {
     skillOverride: "voice_clip",
     inlinePrompt: "Hello, I am Mini-Me — the autonomous agent inside Big Red Button. State an outcome. Press the button. Walk away. I'll handle it."
   });
+});
+
+
+// --- Export conversation as JSON ---
+document.getElementById("exportBtn")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  const data = {
+    schema: "brb-conversation/v1",
+    exported_at: new Date().toISOString(),
+    history: history,
+    gallery: loadGallery(),
+    last_user_prompt: window.__lastUserPrompt || null
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "bigredbutton-conversation-" + new Date().toISOString().replace(/[:.]/g,"-") + ".json";
+  a.click();
+  toast("Exported");
 });
 
 </script>
