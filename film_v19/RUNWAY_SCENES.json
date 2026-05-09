@@ -1,0 +1,97 @@
+{
+  "scenes": [
+    {
+      "id": "scene_01_founder_chaos",
+      "act": 1,
+      "in_film_at": "0:00",
+      "duration_s": 14,
+      "model": "gen4_image",
+      "ratio": "1920:1080",
+      "prompt": "Cinematic night scene of a solo founder developer at a desk surrounded by glowing monitors, code editors, prototype apps, analytics dashboards, browser tabs, AI agent diagrams, mobile app mockups, and unfinished product cards. Dark room, intense focus, blue-gray lighting, premium tech documentary style, handheld subtle motion implied, photorealistic, not cartoonish, 35mm cinematic.",
+      "then_animate_with": "gen3a_turbo",
+      "motion_prompt": "slow handheld push-in toward the screens, subtle parallax, eyes on monitor, breathing-quiet pace"
+    },
+    {
+      "id": "scene_02_signal_dashboard",
+      "act": 2,
+      "in_film_at": "0:23",
+      "duration_s": 12,
+      "model": "gen4_image",
+      "ratio": "1920:1080",
+      "prompt": "A YouTube analytics dashboard, dark mode UI, with a glowing line chart accelerating sharply upward in the rightmost portion. The interface highlights a faceless sleep channel gaining views in real time. Data particles, watch-time signals, subscriber pulses, dark premium UI, cinematic product demo aesthetic, smooth camera push-in implied, no readable fake gibberish, blue and amber accent.",
+      "then_animate_with": "gen3a_turbo",
+      "motion_prompt": "the chart line continues climbing, particles drift upward, the curve glows brighter as it rises"
+    },
+    {
+      "id": "scene_03_sleep_gap",
+      "act": 3,
+      "in_film_at": "0:38",
+      "duration_s": 30,
+      "model": "gen4_image",
+      "ratio": "1920:1080",
+      "prompt": "A cinematic split-screen showing different sleep video styles in tiles: a guided meditation waveform tile, a pure black screen with a single soft glow tile, a beautiful abstract dream visual tile, rain on glass tile, and a dim phone screen beside a bed tile. The visuals are arranged as a premium sleep technology concept board. Low light, blue-gray palette, calm but modern, immersive, no readable text.",
+      "then_animate_with": "gen3a_turbo",
+      "motion_prompt": "very slow drift across the panels, each tile breathing gently, calm and meditative"
+    },
+    {
+      "id": "scene_04_the_button",
+      "act": 4,
+      "in_film_at": "1:40",
+      "duration_s": 8,
+      "model": "gen4_image",
+      "ratio": "1920:1080",
+      "prompt": "A large physical red push-button on a dark futuristic desk, lit dramatically with a single warm-amber rim light from the right and a cool blue fill from the left, surrounded by subtle floating AI interface task nodes that are slightly out of focus. The button feels powerful, cinematic, and consequential. Premium lighting, shallow depth of field, 35mm photographic, dramatic but not cheesy, the button is the only sharp object.",
+      "then_animate_with": "gen3a_turbo",
+      "motion_prompt": "very slow push toward the button, light glints across the dome, breathing pause, then a thumb enters frame and presses"
+    },
+    {
+      "id": "scene_05_agent_wakes",
+      "act": 5,
+      "in_film_at": "1:52",
+      "duration_s": 16,
+      "model": "gen4_image",
+      "ratio": "1920:1080",
+      "prompt": "An autonomous AI agent interface waking up after a button press. Dark glass UI, elegant motion implied, abstract task nodes connecting themselves with thin glowing lines: analyze traction, extract market pattern, generate brand, create scripts, call Runway API, produce videos, create thumbnails, generate multilingual variants, schedule uploads. Premium tech reveal aesthetic, blue-gray palette with red accent on the active node, no readable gibberish.",
+      "then_animate_with": "gen3a_turbo",
+      "motion_prompt": "task nodes activate one by one, lines draw themselves in sequence, particles flow along the connections"
+    },
+    {
+      "id": "scene_06_brand_birth",
+      "act": 6,
+      "in_film_at": "2:08",
+      "duration_s": 10,
+      "model": "gen4_image",
+      "ratio": "1920:1080",
+      "prompt": "A new media brand forming inside a futuristic creative engine. Words like Sleep Technology, Protocol 001, Brown Noise, Guided Shutdown, Rain Black Screen, Multilingual, Shorts, Thumbnails appear as clean abstract interface labels arranged in a constellation. Dark premium sleep-lab aesthetic, blue-gray glow with cyan accents, black screen elements, cinematic product reveal, the central STSC mark forming.",
+      "then_animate_with": "gen3a_turbo",
+      "motion_prompt": "labels rotate gently around the central mark, the mark sharpens into focus, calm orbital motion"
+    },
+    {
+      "id": "scene_07_runway_wall",
+      "act": 6,
+      "in_film_at": "2:20",
+      "duration_s": 14,
+      "model": "gen4_image",
+      "ratio": "1920:1080",
+      "prompt": "A wall of AI-generated media assets rapidly assembling: sleep visuals tiles, rain-on-window clips, black-screen protocol thumbnails, guided narration waveforms, multilingual voice track icons, short-form vertical video tiles, cinematic ambient scenes. Premium AI editing bay, dark room with glow from the wall, smooth camera movement implied, powerful product demo energy, professional, no readable fake text.",
+      "then_animate_with": "gen3a_turbo",
+      "motion_prompt": "tiles assemble into the wall left-to-right, scale up, then a slow truck-back to reveal the full wall lit"
+    },
+    {
+      "id": "scene_08_final_reveal",
+      "act": 7,
+      "in_film_at": "2:47",
+      "duration_s": 14,
+      "model": "gen4_image",
+      "ratio": "1920:1080",
+      "prompt": "A polished final reveal of a complete YouTube channel launch system called Sleep Technology Super Channel. Multiple video cards, playlist shelves, thumbnails, long-form sleep videos, Shorts, multilingual variants, and an upload calendar orbit around a central dashboard with the STSC mark. Cinematic, premium, realistic, dark sleep-tech aesthetic with cyan and warm-amber accents, professional product reveal, no readable gibberish.",
+      "then_animate_with": "gen3a_turbo",
+      "motion_prompt": "elements settle into place around the central dashboard, gentle orbital motion, calm reveal energy"
+    }
+  ],
+  "totals": {
+    "scenes": 8,
+    "approx_compute_credits": 70,
+    "approx_compute_dollars": 35
+  }
+}

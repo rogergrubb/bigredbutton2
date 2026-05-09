@@ -1,0 +1,44 @@
+[seg_01 — 0:00, ~12s]
+I've spent the last year building. Apps. Websites. Phone tools. AI agents. Mini-Me experiments. Autonomous workflows. Some were useful. Some were clever.
+
+[seg_02 — 0:13, ~9s]
+But none of them had the one thing solo founders actually need. Traction.
+
+[seg_03 — 0:23, ~14s]
+Then something unexpected happened. A faceless sleep channel I made for myself started growing. Not slowly. Not randomly. The curve kept climbing.
+
+[seg_04 — 0:38, ~12s]
+I use these videos every night. But none of them were exactly what I want.
+
+[seg_05 — 0:51, ~10s]
+Guided meditations help, but sometimes I want the screen completely black.
+
+[seg_06 — 1:02, ~9s]
+Black-screen videos work, but sometimes they feel emotionally dead.
+
+[seg_07 — 1:12, ~10s]
+Beautiful sleep visuals are calming, but sometimes they keep my eyes open.
+
+[seg_08 — 1:23, ~16s]
+I wanted a system that could create the sleep content I actually want. Guided when needed. Black screen when useful. Cinematic when it matters. Multilingual when it scales.
+
+[seg_09 — 1:40, ~11s]
+So I built The Big Red Button. An autonomous launch agent for solo founders.
+
+[seg_10 — 1:52, ~10s]
+When something starts working, you press the button.
+
+[seg_11 — 2:03, ~16s]
+The agent analyzes the signal. Extracts the market pattern. Builds the positioning. Creates the content architecture. Writes the scripts.
+
+[seg_12 — 2:20, ~12s]
+Then it calls Runway. The secret sauce to scaling. Creates the video assets. The voice. The thumbnails. The Shorts.
+
+[seg_13 — 2:33, ~13s]
+In this demo, one unexpected YouTube signal becomes Sleep Technology Super Channel. A complete media product, not a single video.
+
+[seg_14 — 2:47, ~11s]
+This is not just video generation. It is autonomous momentum capture.
+
+[seg_15 — 2:59, ~12s]
+Because solo founders do not need more ideas. They need to know what is working. And when it works, they need a button.
