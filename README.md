@@ -1,50 +1,75 @@
-# TheBRB — The Big Red Button
+# Big Red Button
 
-A SellFast.Now real-estate AI assistant. One button. Next move handled.
-Powered by Claude (Anthropic), Supabase auth + storage, deployed on Vercel.
-Wraps to Windows, macOS, iOS, and Android via Tauri + Capacitor.
+**One button. Whatever you ask for.**
 
-## Stack
-- **Frontend**: Next.js 15 + React 19 + TypeScript + Tailwind 3
-- **Backend**: Supabase (Postgres + Auth + RLS) — `thebrb` schema in `pi-lead-hub` project
-- **AI**: Anthropic Claude Sonnet 4.6 (server-side proxy at `/api/chat`)
-- **Mobile shell**: Capacitor 6 → iOS + Android
-- **Desktop shell**: Tauri 2 → Windows + macOS
+The universal autonomous agent. State an outcome — build a website, compose a video, research a market, train a clone, automate a workflow — and the agent does the rest.
 
-## v1 Skills (baked in)
-1. Lead Qualifier — score motivation, pull next questions
-2. Cold Call Script — opener + objection handlers
-3. Contract Drafter — purchase agreement / assignment drafts
-4. Follow-up Sequence — multi-day SMS+email cadence
-5. Deal Analyzer — wholesale / flip / BRRRR math
-6. Comp Analysis — ARV from pasted comps
+What [Cowork](https://www.anthropic.com) does for files. What [Manus](https://manus.im) does for tasks. What [Perplexity](https://perplexity.ai) does for research. What [Lovable](https://lovable.dev) does for code. All combined. No gates. Fully autonomous.
 
-## Run locally
-1. Copy `.env.example` to `.env.local` and fill in values (Anthropic key required).
-2. `npm install`
-3. `npm run dev` → http://localhost:3000
+## What's in this repo
 
-## Deploy to Vercel
-See `NEXT_STEPS.md` for the dashboard-only deployment path.
+This repository hosts both the **public landing page** AND the **live agent app** at [bigredbutton.app](https://bigredbutton.app), submitted to the **Runway 2026 API Hackathon**.
 
-## Project structure
+| File | Purpose |
+|---|---|
+| `index.html` | Landing page — hero with embedded demo, superpower grid, outcome examples, workflow diagram, Runway endpoint stack, receipts, memo to Cris |
+| `app.html` | **The live agent app** — single-page UI that streams Mini-Me's reasoning and renders deliverables (images, videos, voice, HTML) as they arrive |
+| `api/agent.js` | Vercel Edge Function — Claude tool-use loop wired to Runway image+video, ElevenLabs voice, web search, HTML emit, text emit. Streams Server-Sent Events |
+| `package.json` | Node engines declaration for Vercel |
+| `vercel.json` | Caching, security headers, function maxDuration |
+| `SETUP.md` | Env vars Roger must set in Vercel dashboard |
+| `demo.mp4` | 60-second hackathon submission film (`MINIME_HACKATHON_DEMO_v18`) |
+| `listing.mp4` | The real-estate listing video the agent generated end-to-end as the demo example |
+| `avatar.mp4` | AI-Roger talking-head clip — Runway `avatars.create` + `gwm1_avatars` |
+| `hero1.png`, `hero2.png` | `gen4_image_turbo` outputs from a brief |
+
+## How it works
+
 ```
-app/                     Next.js App Router pages
-  api/chat/              Streaming Claude proxy
-  api/conversations/     Conversation CRUD
-  auth/callback/         OAuth callback handler
-  chat/                  Main chat UI (auth-gated by middleware)
-  login/, signup/        Auth pages
-components/              React components (AuthForm, ChatShell)
-lib/
-  anthropic.ts           Anthropic SDK helper + model constant
-  supabase/              Browser, server, middleware Supabase clients
-middleware.ts            Session refresh + auth gating
-capacitor.config.ts      Mobile wrapper config
-src-tauri/               Desktop wrapper config
+OUTCOME → MINI-ME → PLAN → APIS → EXECUTE → DELIVER
 ```
 
-## Architecture notes
-- The Anthropic API key NEVER leaves the server. All Claude calls go through `/api/chat`, which authenticates the Supabase session first.
-- Conversations + messages are scoped to `auth.uid()` via RLS — a user cannot read or modify another user's data even with their JWT.
-- `BUILD_TARGET=mobile npm run build` produces a static export in `out/` for Capacitor + Tauri to wrap.
+The user states what they want. Mini-Me plans. The plan calls APIs (Runway for video/voice, ElevenLabs for audio, web search for research, code execution for builds, file/desktop for orchestration). Output is delivered. The user only sees the button and the result.
+
+## Stack — Runway endpoints used in the demo
+
+| Endpoint | Role |
+|---|---|
+| `gen4_image_turbo` | Hero stills (Nano Banana Pro tier) — face-locked references |
+| `gen4.5` | Image-to-video motion clips |
+| `gen4_aleph` | Cinematic color grade pass |
+| `avatars.create` | Persistent custom avatar (the user's clone) |
+| `gwm1_avatars` | Audio-driven avatar talking-head video |
+| `eleven_multilingual_v2` | Voice-over narration via cloned voice |
+| `eleven_text_to_sound_v2` | Music bed and sound effects |
+| `tasks API` | Submit / poll / retrieve orchestration spine |
+
+Plus ElevenLabs Instant Voice Clone for the founder's voice.
+
+## Demo example
+
+The 60-second submission film shows the agent generating a finished real-estate listing video from a one-line brief. **That's one example** — picked for the hackathon because it's a non-trivial, multi-endpoint, end-to-end workflow with verifiable receipts.
+
+The same agent also builds landing pages, researches markets, automates content pipelines, trains personal clones, and orchestrates MCP-style toolchains. Real-estate is the hackathon proof. Universal autonomy is the product.
+
+## Deploy (Vercel — no terminal required)
+
+1. Open [vercel.com/dashboard](https://vercel.com/dashboard)
+2. **Add New ▸ Project ▸ Import Git Repository** (this repo)
+3. Framework preset: **Other** · Output directory: `./`
+4. Click **Deploy**
+5. **Settings ▸ Domains ▸** assign `bigredbutton.app`
+
+Done.
+
+## Receipts
+
+The agent's actual outputs from this hackathon week — embedded on the landing page and committed in this repo:
+
+- 60-second submission film (`demo.mp4`)
+- Real-estate listing video (`listing.mp4`)
+- AI-Roger founder-clone talking head (`avatar.mp4`)
+- 14 hero stills, 6 motion clips, 1 cinematic button render
+- Voice clone, persistent avatar, full orchestration source code
+
+Total Runway compute: **
