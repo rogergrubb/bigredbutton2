@@ -5,58 +5,84 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Big Red Button — the universal autonomous agent</title>
 <meta name="description" content="One button. Whatever you ask for. The universal autonomous agent." />
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='%23e10600'/></svg>" />
 <style>
   :root{
-    --bg:#0a0a0a; --panel:#111; --line:#1f1f1f; --ink:#ededed; --muted:#9a9a9a;
-    --red:#e10600; --red-hot:#ff2a1f; --ok:#22c55e; --warn:#f59e0b;
+    --bg:#0a0a0a; --bg-2:#0f0f0f; --panel:#111; --panel-2:#161616; --line:#1f1f1f; --line-2:#2a2a2a;
+    --ink:#ededed; --muted:#9a9a9a; --dim:#6e6e6e;
+    --red:#e10600; --red-hot:#ff2a1f; --ok:#22c55e; --warn:#f59e0b; --blue:#5fa8e6; --purple:#b38ef0;
     --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:var(--sans);min-height:100vh}
   a{color:#fff;text-decoration:none}
-  .wrap{max-width:1180px;margin:0 auto;padding:24px}
-  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+  .wrap{max-width:1380px;margin:0 auto;padding:18px 22px 60px}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;flex-wrap:wrap}
   .brand{font-weight:800;letter-spacing:-.02em;font-size:18px}
   .brand b{color:var(--red)}
   nav a{color:var(--muted);font-size:13px;margin-left:18px}
   nav a:hover{color:#fff}
-  h1{font-size:clamp(28px,5vw,48px);line-height:1.05;letter-spacing:-.025em;margin:0 0 8px;font-weight:800}
+  .tag{display:inline-block;padding:2px 8px;font-size:11px;border-radius:6px;background:#1a1a1a;color:#cfcfcf;border:1px solid #2a2a2a;margin-left:8px;vertical-align:middle}
+  .tag.live{background:#0c2a18;color:#7ce4a3;border-color:#1f5638}
+
+  h1{font-size:clamp(26px,4.4vw,42px);line-height:1.05;letter-spacing:-.025em;margin:0 0 6px;font-weight:800}
   h1 .accent{color:var(--red)}
-  .lede{color:var(--muted);max-width:720px;margin:0 0 28px;font-size:16px;line-height:1.55}
+  .lede{color:var(--muted);max-width:720px;margin:0 0 22px;font-size:15px;line-height:1.55}
 
-  .grid{display:grid;grid-template-columns: 1fr 1fr;gap:24px}
-  @media (max-width:920px){ .grid{grid-template-columns:1fr} }
+  .grid{display:grid;grid-template-columns: 280px 1fr 380px;gap:18px;align-items:start}
+  @media (max-width:1100px){ .grid{grid-template-columns: 1fr;}.side{order:3} }
 
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
-  .card h3{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+  .card h3{margin:0 0 10px;font-size:11.5px;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);font-weight:700}
+
+  /* --- center panel --- */
   textarea{
-    width:100%;min-height:140px;resize:vertical;background:#0c0c0c;color:var(--ink);
+    width:100%;min-height:130px;resize:vertical;background:#0c0c0c;color:var(--ink);
     border:1px solid var(--line);border-radius:10px;padding:14px;font-family:var(--sans);font-size:15px;line-height:1.5;outline:none;
   }
   textarea:focus{border-color:#3a3a3a}
-  .row{display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap}
-  .chip{font-size:12px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);cursor:pointer;background:#0c0c0c}
+  .row{display:flex;gap:10px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .chip{font-size:12px;padding:6px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);cursor:pointer;background:#0c0c0c;user-select:none}
   .chip:hover{color:#fff;border-color:#333}
-  .chip.active{color:#fff;border-color:var(--red)}
+  .chip.skill{background:#0d121a;border-color:#26344a;color:#cfe5ff}
+  .chip.skill:hover{background:#13202e}
 
-  .button-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px}
+  .button-zone{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:18px}
   .brb{
-    width:220px;height:220px;border-radius:50%;
+    width:200px;height:200px;border-radius:50%;
     background:radial-gradient(circle at 35% 30%, #ff5f55 0%, var(--red) 45%, #8a0500 100%);
     border:6px solid #2a0202;box-shadow: 0 18px 60px rgba(225,6,0,.45), inset 0 -10px 30px rgba(0,0,0,.45);
-    color:#fff;font-weight:900;letter-spacing:.06em;font-size:26px;text-transform:uppercase;
+    color:#fff;font-weight:900;letter-spacing:.06em;font-size:22px;text-transform:uppercase;
     cursor:pointer;transition:transform .12s ease, box-shadow .12s ease;font-family:var(--sans);
   }
   .brb:hover{transform:translateY(-2px);box-shadow:0 24px 70px rgba(225,6,0,.55), inset 0 -10px 30px rgba(0,0,0,.45)}
   .brb:active{transform:translateY(2px);box-shadow:0 8px 20px rgba(225,6,0,.45), inset 0 -6px 20px rgba(0,0,0,.55)}
   .brb[disabled]{opacity:.7;cursor:wait}
-  .hint{color:var(--muted);font-size:13px;text-align:center}
+  .hint{color:var(--muted);font-size:12.5px;text-align:center;max-width:420px;line-height:1.5}
 
+  /* --- left sidebar (skills + gallery) --- */
+  .skills{display:grid;gap:8px}
+  .skill-btn{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--panel-2);transition:border-color .12s, background .12s}
+  .skill-btn:hover{border-color:#3a3a3a;background:#1a1a1a}
+  .skill-btn .icon{width:28px;height:28px;border-radius:7px;display:grid;place-items:center;background:#1f1f1f;font-size:16px}
+  .skill-btn .meta{display:flex;flex-direction:column;gap:1px}
+  .skill-btn .name{font-size:13px;font-weight:600;color:#fff}
+  .skill-btn .desc{font-size:11.5px;color:var(--muted)}
+
+  .gallery{display:grid;gap:6px;max-height:340px;overflow:auto}
+  .artifact{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer;background:#0d0d0d}
+  .artifact:hover{background:#141414}
+  .artifact .kind{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+  .artifact .label{flex:1;font-size:12.5px;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .artifact .when{font-size:10.5px;color:var(--dim)}
+  .empty{font-size:12px;color:var(--dim);padding:8px 4px}
+
+  /* --- right sidebar (stream + plan + sources) --- */
   .stream{
-    background:#070707;border:1px solid var(--line);border-radius:14px;
-    padding:18px;font-family:var(--mono);font-size:13.5px;line-height:1.55;
-    min-height:280px;max-height:520px;overflow:auto;
+    background:#070707;border:1px solid var(--line);border-radius:10px;
+    padding:14px;font-family:var(--mono);font-size:12.5px;line-height:1.55;
+    min-height:240px;max-height:520px;overflow:auto;
   }
   .ev{margin:0 0 6px;white-space:pre-wrap;word-break:break-word}
   .ev.tool{color:#9ad7ff}
@@ -64,26 +90,47 @@
   .ev.ok{color:var(--ok)}
   .ev.err{color:#ff8585}
   .ev.muted{color:var(--muted)}
-  .ev .tag{display:inline-block;padding:1px 6px;border:1px solid #2a2a2a;border-radius:6px;font-size:11px;margin-right:8px;color:#cfcfcf;background:#0f0f0f}
+  .ev .ttag{display:inline-block;padding:1px 6px;border:1px solid #2a2a2a;border-radius:6px;font-size:10.5px;margin-right:8px;color:#cfcfcf;background:#0f0f0f}
 
-  .results{display:grid;gap:14px;margin-top:20px}
+  .plan-list{list-style:none;padding:0;margin:0;display:grid;gap:6px}
+  .plan-item{display:flex;align-items:flex-start;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#0d0d0d}
+  .plan-item .num{width:22px;height:22px;border-radius:6px;background:#1a1a1a;display:grid;place-items:center;font-size:11px;color:#cfcfcf;font-weight:700;flex:0 0 auto}
+  .plan-item .text{font-size:13px;color:#e0e0e0;line-height:1.4}
+  .plan-item.done{opacity:.55}
+  .plan-item.done .num{background:#0c2a18;color:#7ce4a3;border:1px solid #1f5638}
+
+  .sources{display:grid;gap:6px}
+  .src{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#0d0d0d}
+  .src a{color:#9ad7ff;font-size:12.5px;font-weight:600;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .src .snip{color:var(--muted);font-size:11.5px;margin-top:2px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+  /* --- results --- */
+  .results{display:grid;gap:14px;margin-top:18px}
   .result{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
-  .result h4{margin:0 0 10px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  .result h4{margin:0 0 10px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px}
+  .result h4 .actions{margin-left:auto;display:flex;gap:6px}
+  .result h4 .actions button{font-size:11px;padding:4px 8px;border-radius:6px;border:1px solid var(--line);background:#141414;color:#cfcfcf;cursor:pointer;font-family:var(--sans)}
+  .result h4 .actions button:hover{border-color:#3a3a3a;color:#fff}
   .result img,.result video{max-width:100%;border-radius:10px;display:block}
   .result audio{width:100%}
-  .result pre{background:#070707;border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;font-size:12.5px;color:#cfcfcf}
-  .frame{width:100%;height:520px;border:1px solid var(--line);border-radius:10px;background:#fff}
+  .result pre{background:#070707;border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto;font-size:12.5px;color:#cfcfcf;line-height:1.55;white-space:pre-wrap}
+  .result .frame{width:100%;height:560px;border:1px solid var(--line);border-radius:10px;background:#fff}
 
-  footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .followup{display:flex;gap:8px;margin-top:14px;align-items:flex-start}
+  .followup textarea{min-height:54px}
+  .followup button{padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--red);color:#fff;font-weight:700;cursor:pointer;font-family:var(--sans)}
+  .followup button:hover{background:var(--red-hot)}
 
-  .badge{display:inline-block;padding:3px 8px;font-size:11px;border-radius:6px;background:#1a1a1a;color:#cfcfcf;border:1px solid #2a2a2a;margin-left:8px;vertical-align:middle}
-  .badge.live{background:#0c2a18;color:#7ce4a3;border-color:#1f5638}
+  footer{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 14px;border:1px solid #333;border-radius:10px;font-size:13px;z-index:9999;opacity:0;pointer-events:none;transition:opacity .15s}
+  .toast.show{opacity:1;pointer-events:auto}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="brand">BIG <b>RED</b> BUTTON <span class="badge live">v0.1 · live</span></div>
+    <div class="brand">BIG <b>RED</b> BUTTON <span class="tag live">v0.2 · live</span></div>
     <nav>
       <a href="/">Home</a>
       <a href="https://github.com/rogergrubb/bigredbutton2" target="_blank" rel="noopener">GitHub</a>
@@ -92,174 +139,68 @@
 
   <h1>One button. <span class="accent">Whatever you ask for.</span></h1>
   <p class="lede">
-    State an outcome. Press the button. Mini-Me plans, calls APIs, and ships the deliverable.
-    What Cowork does for files, Manus for tasks, Perplexity for research, Lovable for code — combined.
+    State an outcome. Press the button. Mini-Me plans, calls APIs, ships the deliverable.
+    Cowork × Manus × Perplexity × Lovable — all combined behind one button.
   </p>
 
   <div class="grid">
-    <section class="card">
-      <h3>1 · State the outcome</h3>
-      <textarea id="prompt" placeholder="e.g. Generate a hero image of a cinematic lakeside cabin at golden hour and turn it into a 5-second motion clip."></textarea>
-      <div class="row">
-        <span class="chip" data-fill="Generate a cinematic hero image of a coastal Florida luxury home at golden hour, then animate it for 5 seconds as a motion shot.">Real-estate hero+motion</span>
-        <span class="chip" data-fill="Research the top three trends in solopreneur AI tooling for 2026 and summarize them with sources.">Market research</span>
-        <span class="chip" data-fill="Write a one-page landing page for a SaaS called 'Inboxer' that turns email into structured tasks. Output complete HTML.">Landing page (HTML)</span>
-        <span class="chip" data-fill="Read this aloud in my voice: Welcome to Big Red Button. State the outcome. Press the button. Walk away.">Voice clip</span>
-      </div>
-      <div class="row">
-        <button class="brb" id="go">PRESS THE BUTTON</button>
-      </div>
-      <p class="hint" id="hint">No gates. Fully autonomous. Streams live below.</p>
-    </section>
+    <!-- LEFT: skills + artifact gallery -->
+    <aside class="side">
+      <section class="card">
+        <h3>Skills</h3>
+        <div class="skills">
+          <div class="skill-btn" data-skill="build_landing"><div class="icon">▦</div><div class="meta"><span class="name">Build a landing page</span><span class="desc">Lovable-style HTML</span></div></div>
+          <div class="skill-btn" data-skill="research_brief"><div class="icon">⌕</div><div class="meta"><span class="name">Research + brief</span><span class="desc">Perplexity-style sources</span></div></div>
+          <div class="skill-btn" data-skill="image_to_motion"><div class="icon">▶</div><div class="meta"><span class="name">Image → motion clip</span><span class="desc">Runway gen4 + gen3a</span></div></div>
+          <div class="skill-btn" data-skill="voice_clip"><div class="icon">♪</div><div class="meta"><span class="name">Voice clip</span><span class="desc">Mini-Me persona</span></div></div>
+          <div class="skill-btn" data-skill="pitch_deck_html"><div class="icon">◫</div><div class="meta"><span class="name">Pitch deck (HTML)</span><span class="desc">6-slide single file</span></div></div>
+        </div>
+      </section>
 
-    <section class="card">
-      <h3>2 · Mini-Me at work</h3>
-      <div id="stream" class="stream">
-        <p class="ev muted">[idle] State an outcome on the left and press the button.</p>
-      </div>
-    </section>
-  </div>
+      <section class="card">
+        <h3>Artifact gallery</h3>
+        <div id="gallery" class="gallery">
+          <div class="empty">Anything Mini-Me ships will appear here.</div>
+        </div>
+      </section>
+    </aside>
 
-  <section class="results" id="results"></section>
+    <!-- CENTER: prompt + button + results -->
+    <main>
+      <section class="card">
+        <h3>1 · State the outcome</h3>
+        <textarea id="prompt" placeholder="e.g. Build a landing page for a SaaS called Inboxer that turns email into structured tasks."></textarea>
+        <div class="row">
+          <span class="chip" data-fill="Build a landing page for a SaaS called Inboxer that turns email into structured tasks.">Inboxer landing</span>
+          <span class="chip" data-fill="Research the top 3 trends in solopreneur AI tooling for 2026 and summarize with sources.">Research trends</span>
+          <span class="chip" data-fill="Generate a cinematic hero image of a Florida coastal luxury home at golden hour, then animate it for 5 seconds.">Coastal home + motion</span>
+          <span class="chip" data-fill="Read this aloud: Welcome to Big Red Button. State the outcome. Press the button. Walk away.">Voice clip</span>
+        </div>
+        <div class="row" style="justify-content:center;margin-top:6px">
+          <div class="button-zone">
+            <button class="brb" id="go">PRESS THE BUTTON</button>
+            <p class="hint" id="hint">No gates. Fully autonomous. Cmd/Ctrl+Enter to fire.</p>
+          </div>
+        </div>
+      </section>
 
-  <footer>
-    <div>Built solo by Roger Grubb · Number One Son Software Development LLC · Runway 2026 API Hackathon</div>
-    <div>Brain: Claude · Engine: Runway · Voice: ElevenLabs</div>
-  </footer>
-</div>
+      <section id="results" class="results"></section>
 
-<script>
-const $ = (s, r=document) => r.querySelector(s);
-const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+      <section class="card" id="followupCard" style="display:none">
+        <h3>Continue the conversation</h3>
+        <div class="followup">
+          <textarea id="followup" placeholder="Refine, extend, or change direction…"></textarea>
+          <button id="goFollowup">SEND</button>
+        </div>
+      </section>
+    </main>
 
-const promptEl = $("#prompt");
-const goBtn = $("#go");
-const hint = $("#hint");
-const streamEl = $("#stream");
-const results = $("#results");
-
-$$(".chip").forEach(c => c.addEventListener("click", () => {
-  promptEl.value = c.dataset.fill;
-  promptEl.focus();
-}));
-
-function ev(kind, text){
-  const p = document.createElement("p");
-  p.className = "ev " + (kind || "");
-  if(kind === "tool") p.innerHTML = '<span class="tag">tool</span>' + escapeHtml(text);
-  else if(kind === "plan") p.innerHTML = '<span class="tag">plan</span>' + escapeHtml(text);
-  else if(kind === "ok") p.innerHTML = '<span class="tag">done</span>' + escapeHtml(text);
-  else if(kind === "err") p.innerHTML = '<span class="tag">err</span>' + escapeHtml(text);
-  else p.textContent = text;
-  streamEl.appendChild(p);
-  streamEl.scrollTop = streamEl.scrollHeight;
-}
-
-function escapeHtml(s){return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
-
-function pushResult(node){
-  results.appendChild(node);
-  node.scrollIntoView({behavior:"smooth", block:"nearest"});
-}
-
-function resultBox(label, inner){
-  const box = document.createElement("div");
-  box.className = "result";
-  box.innerHTML = `<h4>${escapeHtml(label)}</h4>` + inner;
-  return box;
-}
-
-async function go(){
-  const prompt = promptEl.value.trim();
-  if(!prompt){ promptEl.focus(); return; }
-  goBtn.disabled = true;
-  hint.textContent = "Mini-Me is working. Streaming below — do not close the tab.";
-  streamEl.innerHTML = "";
-  results.innerHTML = "";
-  ev("muted", "[start] " + new Date().toLocaleTimeString());
-  ev("plan", "Mini-Me is reading your outcome…");
-
-  try{
-    const res = await fetch("/api/agent", {
-      method:"POST",
-      headers:{"Content-Type":"application/json","Accept":"text/event-stream"},
-      body: JSON.stringify({prompt})
-    });
-    if(!res.ok || !res.body){ ev("err","Server error: " + res.status + " " + (await res.text())); goBtn.disabled=false; hint.textContent="Done."; return; }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buf = "";
-    while(true){
-      const {value, done} = await reader.read();
-      if(done) break;
-      buf += decoder.decode(value, {stream:true});
-      let idx;
-      while((idx = buf.indexOf("\n\n")) >= 0){
-        const chunk = buf.slice(0, idx); buf = buf.slice(idx+2);
-        const lines = chunk.split("\n");
-        let event = "message"; let data = "";
-        for(const ln of lines){
-          if(ln.startsWith("event:")) event = ln.slice(6).trim();
-          else if(ln.startsWith("data:")) data += ln.slice(5).trim();
-        }
-        if(!data) continue;
-        let payload; try{ payload = JSON.parse(data); }catch{ payload = {text:data}; }
-        handleEvent(event, payload);
-      }
-    }
-    ev("ok","Mini-Me finished.");
-  }catch(e){
-    ev("err","Network/agent error: " + (e && e.message ? e.message : e));
-  }finally{
-    goBtn.disabled = false;
-    hint.textContent = "Press again with a different outcome.";
-  }
-}
-
-function handleEvent(event, payload){
-  if(event === "thought"){ ev("plan", payload.text || ""); return; }
-  if(event === "tool_call"){ ev("tool", `${payload.name} → ${truncate(JSON.stringify(payload.input), 220)}`); return; }
-  if(event === "tool_result"){
-    if(payload.kind === "image" && payload.url){
-      pushResult(resultBox(payload.label || "Image", `<img src="${payload.url}" alt="" />`));
-      ev("ok", "image rendered");
-    } else if(payload.kind === "video" && payload.url){
-      pushResult(resultBox(payload.label || "Video", `<video src="${payload.url}" controls playsinline></video>`));
-      ev("ok", "video rendered");
-    } else if(payload.kind === "audio" && payload.url){
-      pushResult(resultBox(payload.label || "Voice", `<audio src="${payload.url}" controls></audio>`));
-      ev("ok", "audio rendered");
-    } else if(payload.kind === "html" && payload.html){
-      const html = payload.html;
-      const blob = new Blob([html], {type:"text/html"});
-      const url = URL.createObjectURL(blob);
-      pushResult(resultBox(payload.label || "Generated page", `<iframe class="frame" src="${url}"></iframe>`));
-      ev("ok", "page rendered");
-    } else if(payload.kind === "search" && payload.results){
-      const items = payload.results.slice(0,8).map(r => `<li><a href="${escapeHtml(r.url||"#")}" target="_blank" rel="noopener">${escapeHtml(r.title||r.url||"")}</a><br><span style="color:#9a9a9a">${escapeHtml(r.snippet||"")}</span></li>`).join("");
-      pushResult(resultBox(payload.label || "Sources", `<ul>${items}</ul>`));
-      ev("ok", `${payload.results.length} sources`);
-    } else if(payload.kind === "text" && payload.text){
-      pushResult(resultBox(payload.label || "Output", `<pre>${escapeHtml(payload.text)}</pre>`));
-      ev("ok", "text output");
-    } else {
-      ev("muted", "tool_result: " + truncate(JSON.stringify(payload), 280));
-    }
-    return;
-  }
-  if(event === "final"){
-    if(payload.text){ pushResult(resultBox("Mini-Me summary", `<pre>${escapeHtml(payload.text)}</pre>`)); }
-    return;
-  }
-  if(event === "error"){ ev("err", payload.text || "unknown error"); return; }
-  ev("muted", `${event}: ${truncate(JSON.stringify(payload),200)}`);
-}
-
-function truncate(s, n){ s = String(s); return s.length > n ? s.slice(0,n) + "…" : s; }
-
-goBtn.addEventListener("click", go);
-promptEl.addEventListener("keydown", e => { if((e.metaKey||e.ctrlKey) && e.key === "Enter"){ go(); } });
-</script>
-</body>
-</html>
+    <!-- RIGHT: stream + plan + sources -->
+    <aside class="side">
+      <section class="card">
+        <h3>Mini-Me at work</h3>
+        <div id="stream" class="stream"><p class="ev muted">[idle] State an outcome and press the button.</p></div>
+      </section>
+      <section class="card" id="planCard" style="display:none">
+        <h3>Plan</h3>
+        <ul id="plan" class="

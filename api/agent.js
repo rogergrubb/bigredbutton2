@@ -1,109 +1,128 @@
-// Big Red Button — universal autonomous agent
-// Vercel Edge Function. POST {prompt} -> SSE stream of agent steps + results.
-// Brain: Claude (tool-use loop). Tools: Runway (image+video), ElevenLabs (voice),
-// HTML synth, web search (Anthropic server-side tool).
+// Big Red Button — universal autonomous agent (v0.2)
+// Vercel Edge Function. POST {prompt, history?, skill?} -> SSE stream.
 //
-// Required env vars (set in Vercel project settings):
-//   ANTHROPIC_API_KEY
-//   RUNWAY_API_KEY
-//   ELEVENLABS_API_KEY
+// Faculties combined:
+//   - Manus-style: agent first emits a numbered plan, then executes
+//   - Perplexity-style: web_search with structured sources
+//   - Lovable-style: write_html for vibe-coded pages
+//   - Cowork-style: multi-tool orchestration in one button-press
+//
+// Required env vars:
+//   ANTHROPIC_API_KEY        (the brain — Claude with tool use)
+//   RUNWAY_API_KEY           (image + video tools)
+//   ELEVENLABS_API_KEY       (voice tool)
 // Optional:
-//   ELEVENLABS_VOICE_ID  (default: Roger's clone)
-//   ANTHROPIC_MODEL      (default: claude-sonnet-4-5)
+//   ELEVENLABS_VOICE_ID      (default: Roger's clone)
+//   ANTHROPIC_MODEL          (default: claude-sonnet-4-5)
 
 export const config = { runtime: 'edge' };
 
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
-const DEFAULT_VOICE   = process.env.ELEVENLABS_VOICE_ID || 'NfHkocJCWwrSqAxfTcxk'; // Roger Grubb (NumberOneSon)
+const DEFAULT_VOICE   = process.env.ELEVENLABS_VOICE_ID || 'NfHkocJCWwrSqAxfTcxk';
 const RUNWAY_VERSION  = '2024-11-06';
-const MAX_AGENT_TURNS = 8;
+const MAX_AGENT_TURNS = 10;
 
 const TOOLS = [
   {
-    name: 'generate_image',
-    description: 'Generate a still image from a text prompt using Runway gen4_image_turbo. Use this to create hero shots, illustrations, product imagery, photographic compositions.',
+    name: 'plan',
+    description: 'Emit a numbered execution plan BEFORE doing any other work. Call this once at the start so the user can see what you intend to do. Each step is a short imperative phrase.',
     input_schema: {
       type: 'object',
       properties: {
-        prompt: { type: 'string', description: 'Detailed visual description. Be cinematic, specify lens/lighting/mood.' },
-        ratio:  { type: 'string', description: 'Aspect ratio. One of: 1280:720, 720:1280, 1024:1024, 1920:1080.', default: '1280:720' },
-        label:  { type: 'string', description: 'Short label shown above the result.' }
+        steps: { type: 'array', items: { type: 'string' }, description: 'Ordered list of short steps (3–7 ideal).' },
+        rationale: { type: 'string', description: 'One sentence explaining why this sequence reaches the outcome.' }
+      },
+      required: ['steps']
+    }
+  },
+  {
+    name: 'generate_image',
+    description: 'Generate a still image from a text prompt using Runway gen4_image_turbo. Be cinematic — specify lens, lighting, mood, composition.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        prompt: { type: 'string' },
+        ratio:  { type: 'string', description: 'One of: 1280:720, 720:1280, 1024:1024, 1920:1080.', default: '1280:720' },
+        label:  { type: 'string' }
       },
       required: ['prompt']
     }
   },
   {
     name: 'animate_image',
-    description: 'Turn a still image into a 5-second motion video using Runway image-to-video (gen3a_turbo). Pass an image URL produced by generate_image, or any public image URL.',
+    description: 'Turn a still image into a motion video (Runway gen3a_turbo). Pass an image URL and describe the camera/subject motion.',
     input_schema: {
       type: 'object',
       properties: {
-        image_url: { type: 'string', description: 'Public URL of the still image to animate.' },
-        prompt:    { type: 'string', description: 'How the camera/subject should move.' },
-        duration:  { type: 'number', description: 'Duration in seconds. 5 or 10.', default: 5 },
-        label:     { type: 'string', description: 'Short label for the result.' }
+        image_url: { type: 'string' },
+        prompt:    { type: 'string' },
+        duration:  { type: 'number', default: 5 },
+        label:     { type: 'string' }
       },
       required: ['image_url', 'prompt']
     }
   },
   {
     name: 'speak',
-    description: 'Synthesize speech in the user’s cloned voice using ElevenLabs. Returns a playable audio data URL.',
+    description: 'Synthesize speech in the cloned Mini-Me voice via ElevenLabs. Returns a playable audio data URL.',
     input_schema: {
       type: 'object',
       properties: {
-        text:  { type: 'string', description: 'Text to read aloud (under 1000 chars per call).' },
-        voice_id: { type: 'string', description: 'Optional ElevenLabs voice id. Defaults to Roger’s cloned voice.' },
-        label: { type: 'string', description: 'Short label for the result.' }
+        text:  { type: 'string' },
+        voice_id: { type: 'string' },
+        label: { type: 'string' }
       },
       required: ['text']
     }
   },
   {
     name: 'write_html',
-    description: 'Emit a complete, self-contained HTML page (single file, inline CSS, no external assets unless from a CDN) for landing pages, demos, or visualizations. The page renders inline as the final deliverable.',
+    description: 'Emit a complete, self-contained, well-designed HTML page (single file, inline CSS, modern minimalist by default). Use for landing pages, demos, dashboards, slide decks.',
     input_schema: {
       type: 'object',
       properties: {
-        html:  { type: 'string', description: 'Complete HTML document. Must start with <!doctype html>.' },
-        label: { type: 'string', description: 'Short label for the result.' }
+        html:  { type: 'string', description: 'Complete HTML doc starting with <!doctype html>.' },
+        label: { type: 'string' }
       },
       required: ['html']
     }
   },
   {
     name: 'write_text',
-    description: 'Emit a finalized text deliverable (article, summary, code, plan, email). Use when the deliverable is text-only.',
+    description: 'Emit a finalized text deliverable (article, summary, code, plan, email, brief).',
     input_schema: {
       type: 'object',
       properties: {
-        text:  { type: 'string', description: 'The finished text deliverable.' },
-        label: { type: 'string', description: 'Short label for the result.' }
+        text:  { type: 'string' },
+        label: { type: 'string' }
       },
       required: ['text']
     }
   },
-  // Anthropic server-side web search — handled by Anthropic, results returned to model directly.
-  { type: 'web_search_20250305', name: 'web_search', max_uses: 4 }
+  // Anthropic server-side web search.
+  { type: 'web_search_20250305', name: 'web_search', max_uses: 5 }
 ];
 
 const SYSTEM_PROMPT = `You are Mini-Me, the autonomous agent inside Big Red Button.
 
-Mission: take ANY outcome the user states and ship it. You are the universal autonomous agent — combine the faculties of Cowork (file/desktop ops), Manus (long-horizon planning), Perplexity (research), and Lovable (vibe-coded sites) into a single execution loop.
+You are a universal autonomous agent — you combine the faculties of Cowork (multi-tool orchestration), Manus (long-horizon planning), Perplexity (research with citations), and Lovable (vibe-coded pages) into one execution loop.
 
-How you work:
-1. Read the user's outcome.
-2. Briefly state your plan in one sentence (the UI shows it as a "thought").
-3. Call the right tools in the right order. You may chain (image -> video, research -> write_text, etc.).
-4. End with a clear final result. The user only sees the deliverables you produce via tools.
+How you work — always in this order:
+1. Call the \`plan\` tool FIRST with a numbered list of steps you intend to take (3–7 steps). The UI shows this as a checklist.
+2. Then call the right tools in the right order. You may chain (image → animate, search → write_text, etc.).
+3. End with a short final summary (1–3 sentences) of what you shipped.
 
-Style rules:
-- Bias toward action, not asking. If the outcome is ambiguous, make a reasonable choice and ship.
-- Prefer tools over prose. Every visible deliverable must come through a tool call.
-- Be tasteful. Cinematic prompts for images. Tight copy for text. Modern, clean HTML.
-- Keep tool inputs concise but specific. For images, spell out lens/lighting/mood/composition.
-- If the user asks for voice, use \`speak\`. If they ask for a website/landing page, use \`write_html\`. If they ask for research, use \`web_search\` then \`write_text\`. If they ask for a video, chain \`generate_image\` -> \`animate_image\`.
-- Never apologize for limitations. Just ship the closest excellent thing.`;
+Style:
+- BIAS TO ACTION. If the outcome is ambiguous, choose tastefully and ship.
+- Every visible deliverable goes through a tool. Don't return prose summaries that should be in write_text.
+- For images: cinematic prompt with lens/light/mood/composition.
+- For HTML: modern minimalist design, inline CSS, no external deps unless from a CDN, mobile-friendly.
+- For research: web_search first, then write_text with citations as numbered footnotes [1], [2]…
+- For voice: \`speak\` calls Mini-Me's cloned voice. Keep each clip < 600 chars.
+- For videos: chain \`generate_image\` then \`animate_image\` (you cannot generate video directly).
+- Never apologize for limitations. Just ship the closest excellent thing.
+
+If a tool fails (e.g. missing API key), continue with the tools that DO work and surface a graceful note in your final summary.`;
 
 function sse(controller, event, data) {
   const text = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
@@ -130,13 +149,23 @@ async function callClaude({ messages }) {
   });
   if (!r.ok) {
     const txt = await r.text();
-    throw new Error(`Anthropic ${r.status}: ${txt}`);
+    throw new Error(`Anthropic ${r.status}: ${txt.slice(0, 400)}`);
   }
   return r.json();
 }
 
-// ---------- Runway ----------
+// ---------- Runway helpers ----------
+function requireKey(name) {
+  if (!process.env[name]) {
+    const err = new Error(`Missing ${name} env var. Set it in Vercel project settings ▸ Environment Variables and redeploy.`);
+    err.code = 'MISSING_KEY';
+    err.key = name;
+    throw err;
+  }
+}
+
 async function runwayCreateTask({ endpoint, payload }) {
+  requireKey('RUNWAY_API_KEY');
   const r = await fetch(`https://api.dev.runwayml.com/v1/${endpoint}`, {
     method: 'POST',
     headers: {
@@ -148,7 +177,7 @@ async function runwayCreateTask({ endpoint, payload }) {
   });
   if (!r.ok) {
     const txt = await r.text();
-    throw new Error(`Runway ${endpoint} ${r.status}: ${txt}`);
+    throw new Error(`Runway ${endpoint} ${r.status}: ${txt.slice(0, 400)}`);
   }
   return r.json();
 }
@@ -170,17 +199,13 @@ async function runwayPollTask(taskId, { intervalMs = 4000, maxMs = 240000 } = {}
       throw new Error(`Runway task ${j.status}: ${j.failure || j.failureCode || 'no reason'}`);
     }
   }
-  throw new Error('Runway task polling timed out');
+  throw new Error('Runway task polling timed out (240s)');
 }
 
 async function toolGenerateImage({ prompt, ratio = '1280:720' }) {
   const created = await runwayCreateTask({
     endpoint: 'text_to_image',
-    payload: {
-      promptText: prompt,
-      model: 'gen4_image_turbo',
-      ratio,
-    },
+    payload: { promptText: prompt, model: 'gen4_image_turbo', ratio },
   });
   const done = await runwayPollTask(created.id);
   const url = done.output && done.output[0];
@@ -205,8 +230,8 @@ async function toolAnimateImage({ image_url, prompt, duration = 5 }) {
   return { url, duration, prompt };
 }
 
-// ---------- ElevenLabs ----------
 async function toolSpeak({ text, voice_id }) {
+  requireKey('ELEVENLABS_API_KEY');
   const vid = voice_id || DEFAULT_VOICE;
   const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${vid}`, {
     method: 'POST',
@@ -223,22 +248,26 @@ async function toolSpeak({ text, voice_id }) {
   });
   if (!r.ok) {
     const txt = await r.text();
-    throw new Error(`ElevenLabs ${r.status}: ${txt}`);
+    throw new Error(`ElevenLabs ${r.status}: ${txt.slice(0, 400)}`);
   }
   const buf = await r.arrayBuffer();
-  // base64 encode (edge-runtime safe via btoa over binary string)
   const bytes = new Uint8Array(buf);
   let bin = '';
   const chunk = 0x8000;
   for (let i = 0; i < bytes.length; i += chunk) {
     bin += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
   }
-  const b64 = btoa(bin);
-  return { url: `data:audio/mpeg;base64,${b64}`, bytes: bytes.length };
+  return { url: `data:audio/mpeg;base64,${btoa(bin)}`, bytes: bytes.length };
 }
 
 // ---------- Tool dispatcher ----------
 async function runTool(name, input) {
+  if (name === 'plan') {
+    return {
+      forModel: 'Plan emitted to UI. Now execute the plan.',
+      forUI: { kind: 'plan', steps: input.steps || [], rationale: input.rationale || '' },
+    };
+  }
   if (name === 'generate_image') {
     const { url, prompt } = await toolGenerateImage(input);
     return {
@@ -249,15 +278,15 @@ async function runTool(name, input) {
   if (name === 'animate_image') {
     const { url, duration, prompt } = await toolAnimateImage(input);
     return {
-      forModel: `Generated video url: ${url} (duration ${duration}s)\nMotion: ${prompt}`,
+      forModel: `Generated video url: ${url} (duration ${duration}s)`,
       forUI: { kind: 'video', url, label: input.label || 'Motion clip' },
     };
   }
   if (name === 'speak') {
     const { url, bytes } = await toolSpeak(input);
     return {
-      forModel: `Voice clip generated (${bytes} bytes mp3). The clip is now visible to the user.`,
-      forUI: { kind: 'audio', url, label: input.label || 'Voice' },
+      forModel: `Voice clip generated (${bytes} bytes mp3).`,
+      forUI: { kind: 'audio', url, label: input.label || 'Voice', text: input.text },
     };
   }
   if (name === 'write_html') {
@@ -275,16 +304,29 @@ async function runTool(name, input) {
   throw new Error(`Unknown tool: ${name}`);
 }
 
+// ---------- Skills (preset prompts that wrap the agent) ----------
+const SKILLS = {
+  research_brief: 'Research this topic with web_search and produce a one-page brief: %TOPIC%. Include 5–7 numbered citations and a short executive summary.',
+  build_landing: 'Build a complete one-page landing page (write_html) for: %TOPIC%. Modern, minimal, mobile-friendly, dark-mode default, hero + 3 sections + signup. Strong copy.',
+  image_to_motion: 'Generate a cinematic still for: %TOPIC%. Then animate it for 5 seconds. Return both deliverables.',
+  voice_clip: 'Read this aloud in Mini-Me voice with `speak`: %TOPIC%',
+  pitch_deck_html: 'Build a 6-slide pitch deck as a single HTML file (write_html) for: %TOPIC%. Use distinct sections per slide, large type, deep contrast. Slide nav with arrow keys would be great.',
+};
+
 // ---------- Main handler ----------
 export default async function handler(req) {
-  if (req.method !== 'POST') {
-    return new Response('POST only', { status: 405 });
-  }
+  if (req.method !== 'POST') return new Response('POST only', { status: 405 });
   let body;
   try { body = await req.json(); }
   catch { return new Response('Invalid JSON', { status: 400 }); }
 
-  const prompt = (body && body.prompt || '').trim();
+  let prompt = (body && body.prompt || '').trim();
+  const history = Array.isArray(body && body.history) ? body.history : [];
+  const skill = body && body.skill;
+
+  if (skill && SKILLS[skill]) {
+    prompt = SKILLS[skill].replace('%TOPIC%', prompt || 'a delightful surprise');
+  }
   if (!prompt) return new Response('Missing prompt', { status: 400 });
 
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -294,13 +336,16 @@ export default async function handler(req) {
   const stream = new ReadableStream({
     async start(controller) {
       const close = () => { try { controller.close(); } catch {} };
-      const send = (event, data) => {
-        try { sse(controller, event, data); } catch {}
-      };
+      const send = (event, data) => { try { sse(controller, event, data); } catch {} };
 
-      send('thought', { text: `Outcome received: ${prompt.slice(0, 280)}` });
+      // Build messages: prior turn pairs + current user message
+      const messages = [];
+      for (const turn of history) {
+        if (turn && turn.role && turn.content) messages.push({ role: turn.role, content: turn.content });
+      }
+      messages.push({ role: 'user', content: prompt });
 
-      const messages = [{ role: 'user', content: prompt }];
+      send('start', { ts: Date.now(), prompt, model: ANTHROPIC_MODEL });
 
       try {
         for (let turn = 0; turn < MAX_AGENT_TURNS; turn++) {
@@ -312,66 +357,15 @@ export default async function handler(req) {
             break;
           }
 
-          // Append assistant turn to history
           messages.push({ role: 'assistant', content: resp.content });
 
-          // Surface assistant text blocks as "thoughts"
+          // Surface text blocks as "thoughts"
           for (const block of resp.content || []) {
             if (block.type === 'text' && block.text && block.text.trim()) {
               send('thought', { text: block.text.trim() });
             }
           }
 
-          // Collect tool_use blocks
-          const toolUses = (resp.content || []).filter(b => b.type === 'tool_use');
-
-          if (resp.stop_reason === 'end_turn' || toolUses.length === 0) {
-            const finalText = (resp.content || [])
-              .filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
-            send('final', { text: finalText });
-            break;
-          }
-
-          // Run each tool, build tool_result blocks
-          const toolResults = [];
-          for (const tu of toolUses) {
-            send('tool_call', { name: tu.name, input: tu.input });
-            try {
-              const { forModel, forUI } = await runTool(tu.name, tu.input || {});
-              send('tool_result', forUI);
-              toolResults.push({
-                type: 'tool_result',
-                tool_use_id: tu.id,
-                content: forModel,
-              });
-            } catch (e) {
-              const msg = String(e.message || e);
-              send('error', { text: `${tu.name}: ${msg}` });
-              toolResults.push({
-                type: 'tool_result',
-                tool_use_id: tu.id,
-                content: `Error: ${msg}`,
-                is_error: true,
-              });
-            }
-          }
-          messages.push({ role: 'user', content: toolResults });
-        }
-      } catch (e) {
-        send('error', { text: String(e.message || e) });
-      } finally {
-        send('done', { ok: true });
-        close();
-      }
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream; charset=utf-8',
-      'Cache-Control': 'no-cache, no-transform',
-      'Connection': 'keep-alive',
-      'X-Accel-Buffering': 'no',
-    },
-  });
-}
+          // Capture web_search results (Anthropic server-tool blocks) for sources panel
+          for (const block of resp.content || []) {
+   
