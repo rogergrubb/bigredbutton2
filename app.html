@@ -203,4 +203,267 @@
       </section>
       <section class="card" id="planCard" style="display:none">
         <h3>Plan</h3>
-        <ul id="plan" class="
+        <ul id="plan" class="plan-list"></ul>
+      </section>
+      <section class="card" id="sourcesCard" style="display:none">
+        <h3>Sources</h3>
+        <div id="sources" class="sources"></div>
+      </section>
+    </aside>
+  </div>
+
+  <footer>
+    <div>Big Red Button · Number One Son Software Development LLC · Runway 2026 API Hackathon</div>
+    <div>Brain: Claude · Engine: Runway · Voice: ElevenLabs</div>
+  </footer>
+
+  <section id="results" class="results"></section>
+
+  <section class="card" id="followupCard" style="display:none">
+    <h3>Continue the conversation</h3>
+    <div class="followup">
+      <textarea id="followup" placeholder="Refine, extend, or change direction…"></textarea>
+      <button id="goFollowup">SEND</button>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const $ = (s, r=document) => r.querySelector(s);
+const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+const promptEl = $("#prompt");
+const goBtn = $("#go");
+const hint = $("#hint");
+const streamEl = $("#stream");
+const results = $("#results");
+const planCard = $("#planCard");
+const planList = $("#plan");
+const sourcesCard = $("#sourcesCard");
+const sourcesEl = $("#sources");
+const followupCard = $("#followupCard");
+const followupEl = $("#followup");
+const galleryEl = $("#gallery");
+const toastEl = $("#toast");
+
+let history = [];
+let lastAssistantContent = null;
+let activeSkill = null;
+let planStepIndex = 0;
+
+const GALLERY_KEY = "brb_gallery_v1";
+function loadGallery(){ try { return JSON.parse(localStorage.getItem(GALLERY_KEY) || "[]"); } catch { return []; } }
+function saveGallery(items){ try { localStorage.setItem(GALLERY_KEY, JSON.stringify(items.slice(0, 40))); } catch {} }
+function addArtifact(item){
+  const items = loadGallery();
+  items.unshift({ ...item, ts: Date.now() });
+  saveGallery(items);
+  renderGallery();
+}
+function renderGallery(){
+  const items = loadGallery();
+  if (!items.length){ galleryEl.innerHTML = '<div class="empty">Anything Mini-Me ships will appear here.</div>'; return; }
+  galleryEl.innerHTML = items.map((it, i) => `
+    <div class="artifact" data-idx="${i}">
+      <span class="kind">${escapeHtml(it.kind || "")}</span>
+      <span class="label">${escapeHtml(it.label || it.kind || "Artifact")}</span>
+      <span class="when">${timeAgo(it.ts)}</span>
+    </div>`).join("");
+  $$(".artifact", galleryEl).forEach(el => el.addEventListener("click", () => {
+    const idx = parseInt(el.dataset.idx, 10);
+    const it = loadGallery()[idx];
+    if (it) reopenArtifact(it);
+  }));
+}
+function timeAgo(ts){
+  const m = Math.round((Date.now() - ts) / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return m + "m";
+  const h = Math.round(m/60); if (h < 24) return h + "h";
+  return Math.round(h/24) + "d";
+}
+function reopenArtifact(it){
+  const node = renderResultBox(it);
+  results.prepend(node);
+  node.scrollIntoView({behavior:"smooth", block:"nearest"});
+  toast("Re-opened from gallery");
+}
+renderGallery();
+
+$$(".chip").forEach(c => c.addEventListener("click", () => { promptEl.value = c.dataset.fill; promptEl.focus(); }));
+$$(".skill-btn").forEach(b => b.addEventListener("click", () => {
+  activeSkill = b.dataset.skill;
+  hint.textContent = "Skill: " + ($(".name", b)?.textContent || "") + ". Type a topic and press the button.";
+  promptEl.placeholder = "Topic for " + ($(".name", b)?.textContent || "skill") + "…";
+  promptEl.focus();
+}));
+
+function ev(kind, text){
+  const p = document.createElement("p");
+  p.className = "ev " + (kind || "");
+  if(kind === "tool") p.innerHTML = '<span class="ttag">tool</span>' + escapeHtml(text);
+  else if(kind === "plan") p.innerHTML = '<span class="ttag">plan</span>' + escapeHtml(text);
+  else if(kind === "ok") p.innerHTML = '<span class="ttag">done</span>' + escapeHtml(text);
+  else if(kind === "err") p.innerHTML = '<span class="ttag">err</span>' + escapeHtml(text);
+  else p.textContent = text;
+  streamEl.appendChild(p);
+  streamEl.scrollTop = streamEl.scrollHeight;
+}
+function escapeHtml(s){return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function truncate(s, n){ s = String(s); return s.length > n ? s.slice(0,n) + "…" : s; }
+function toast(msg){ toastEl.textContent = msg; toastEl.classList.add("show"); setTimeout(() => toastEl.classList.remove("show"), 1800); }
+
+function renderResultBox(payload){
+  const box = document.createElement("div");
+  box.className = "result";
+  let inner = ""; let actions = "";
+  const label = payload.label || payload.kind;
+  if (payload.kind === "image" && payload.url){
+    inner = '<img src="' + payload.url + '" alt="" />';
+    actions = '<button data-act="open" data-url="' + payload.url + '">Open</button>';
+  } else if (payload.kind === "video" && payload.url){
+    inner = '<video src="' + payload.url + '" controls playsinline></video>';
+    actions = '<button data-act="open" data-url="' + payload.url + '">Open</button>';
+  } else if (payload.kind === "audio" && payload.url){
+    inner = '<audio src="' + payload.url + '" controls></audio>' + (payload.text ? '<pre style="margin-top:10px">' + escapeHtml(payload.text) + '</pre>' : "");
+    actions = '<button data-act="download" data-url="' + payload.url + '" data-name="mini-me.mp3">Download</button>';
+  } else if (payload.kind === "html" && payload.html){
+    const blob = new Blob([payload.html], {type:"text/html"});
+    const url = URL.createObjectURL(blob);
+    inner = '<iframe class="frame" src="' + url + '"></iframe>';
+    actions = '<button data-act="open-blob" data-url="' + url + '">Open</button> <button data-act="download-html">Download</button> <button data-act="refine">Refine</button>';
+  } else if (payload.kind === "text" && payload.text){
+    inner = '<pre>' + escapeHtml(payload.text) + '</pre>';
+    actions = '<button data-act="copy" data-text="' + escapeHtml(payload.text) + '">Copy</button> <button data-act="speak">Read aloud</button>';
+  } else if (payload.kind === "search" && payload.results){
+    const items = payload.results.slice(0,12).map((r,i) => '<div class="src"><a href="' + escapeHtml(r.url||"#") + '" target="_blank" rel="noopener">[' + (i+1) + '] ' + escapeHtml(r.title||r.url||"") + '</a>' + (r.snippet ? '<div class="snip">' + escapeHtml(r.snippet) + '</div>' : "") + '</div>').join("");
+    inner = '<div class="sources">' + items + '</div>';
+  } else {
+    inner = '<pre>' + escapeHtml(JSON.stringify(payload, null, 2)) + '</pre>';
+  }
+  box.innerHTML = '<h4>' + escapeHtml(label || "Output") + ' <span class="actions">' + actions + '</span></h4>' + inner;
+  $$("button[data-act]", box).forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const act = btn.dataset.act;
+      if (act === "copy") { try { await navigator.clipboard.writeText(btn.dataset.text || ""); toast("Copied"); } catch { toast("Copy failed"); } }
+      else if (act === "open" || act === "open-blob") window.open(btn.dataset.url, "_blank");
+      else if (act === "download") { const a = document.createElement("a"); a.href = btn.dataset.url; a.download = btn.dataset.name || "download"; a.click(); }
+      else if (act === "download-html") { const blob = new Blob([payload.html], {type:"text/html"}); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = (payload.label || "page").replace(/\s+/g,"_") + ".html"; a.click(); }
+      else if (act === "refine") { followupEl.value = "Refine this: keep the structure but improve copy and tighten the design."; followupEl.focus(); }
+      else if (act === "speak") { speakText(payload.text || ""); }
+    });
+  });
+  return box;
+}
+
+async function speakText(text){
+  if (!text) return;
+  toast("Mini-Me reading…");
+  await runAgent({ skillOverride: "voice_clip", inlinePrompt: text });
+}
+
+function pushPlan(steps){
+  planCard.style.display = "block";
+  planList.innerHTML = (steps || []).map((s, i) => '<li class="plan-item" data-i="' + i + '"><div class="num">' + (i+1) + '</div><div class="text">' + escapeHtml(s) + '</div></li>').join("");
+  planStepIndex = 0;
+}
+function advancePlan(){
+  const items = $$(".plan-item", planList);
+  if (planStepIndex < items.length){ items[planStepIndex].classList.add("done"); planStepIndex++; }
+}
+function pushSources(items){
+  if (!items || !items.length) return;
+  sourcesCard.style.display = "block";
+  sourcesEl.innerHTML = items.slice(0, 12).map((r, i) => '<div class="src"><a href="' + escapeHtml(r.url||"#") + '" target="_blank" rel="noopener">[' + (i+1) + '] ' + escapeHtml(r.title || r.url || "") + '</a>' + (r.snippet ? '<div class="snip">' + escapeHtml(r.snippet) + '</div>' : "") + '</div>').join("");
+}
+
+function handleEvent(event, payload){
+  if (event === "start") { ev("muted", "[start] " + new Date().toLocaleTimeString()); return; }
+  if (event === "thought") { ev("plan", payload.text || ""); return; }
+  if (event === "tool_call") { ev("tool", payload.name + " → " + truncate(JSON.stringify(payload.input), 220)); return; }
+  if (event === "tool_result") {
+    if (payload.kind === "plan") { pushPlan(payload.steps || []); ev("plan", "Plan: " + (payload.steps || []).join(" → ")); return; }
+    if (payload.kind === "search") { pushSources(payload.results || []); ev("ok", payload.results.length + " sources"); return; }
+    const node = renderResultBox(payload);
+    results.appendChild(node);
+    node.scrollIntoView({behavior:"smooth", block:"nearest"});
+    addArtifact({ kind: payload.kind, label: payload.label, url: payload.url, html: payload.html, text: payload.text });
+    advancePlan();
+    ev("ok", payload.kind + " rendered");
+    return;
+  }
+  if (event === "final") {
+    if (payload.assistant_content) lastAssistantContent = payload.assistant_content;
+    if (payload.text) {
+      const node = renderResultBox({ kind: "text", text: payload.text, label: "Mini-Me summary" });
+      results.appendChild(node);
+    }
+    return;
+  }
+  if (event === "error") { ev("err", payload.text || "unknown error"); return; }
+  if (event === "done") { ev("muted", "[done]"); return; }
+}
+
+async function runAgent(opts){
+  opts = opts || {};
+  const userText = (opts.inlinePrompt !== undefined ? opts.inlinePrompt : (opts.isFollowup ? followupEl.value : promptEl.value)).trim();
+  if (!userText) { (opts.isFollowup ? followupEl : promptEl).focus(); return; }
+  goBtn.disabled = true;
+  hint.textContent = "Mini-Me is working. Streaming below.";
+  if (!opts.isFollowup) {
+    streamEl.innerHTML = "";
+    results.innerHTML = "";
+    planCard.style.display = "none"; planList.innerHTML = ""; planStepIndex = 0;
+    sourcesCard.style.display = "none"; sourcesEl.innerHTML = "";
+    history = [];
+  }
+  const body = { prompt: userText, history };
+  const useSkill = opts.skillOverride !== undefined ? opts.skillOverride : activeSkill;
+  if (useSkill) body.skill = useSkill;
+  try {
+    const res = await fetch("/api/agent", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "text/event-stream" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok || !res.body) { ev("err", "Server " + res.status + ": " + (await res.text())); return; }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf("\n\n")) >= 0) {
+        const chunk = buf.slice(0, idx); buf = buf.slice(idx + 2);
+        const lines = chunk.split("\n");
+        let event = "message"; let data = "";
+        for (const ln of lines) {
+          if (ln.startsWith("event:")) event = ln.slice(6).trim();
+          else if (ln.startsWith("data:")) data += ln.slice(5).trim();
+        }
+        if (!data) continue;
+        let payload; try { payload = JSON.parse(data); } catch { payload = { text: data }; }
+        handleEvent(event, payload);
+      }
+    }
+    history.push({ role: "user", content: userText });
+    if (lastAssistantContent) history.push({ role: "assistant", content: lastAssistantContent });
+    followupCard.style.display = "block";
+    if (opts.isFollowup) followupEl.value = "";
+  } catch (e) {
+    ev("err", "Network error: " + (e && e.message ? e.message : e));
+  } finally {
+    goBtn.disabled = false;
+    hint.textContent = "Press again, follow up below, or click a skill.";
+  }
+}
+
+goBtn.addEventListener("click", () => runAgent({}));
+$("#goFollowup").addEventListener("click", () => runAgent({ isFollowup: true }));
+promptEl.addEventListener("keydown", e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") runAgent({}); });
+followupEl.addEventListener("keydown", e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") runAgent({ isFollowup: true }); });
+</script>
+</body>
+</html>

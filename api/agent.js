@@ -368,4 +368,66 @@ export default async function handler(req) {
 
           // Capture web_search results (Anthropic server-tool blocks) for sources panel
           for (const block of resp.content || []) {
-   
+               if (block.type === 'web_search_tool_result') {
+              const items = (block.content || []).map(it => ({
+                title: it.title || '',
+                url: it.url || '',
+                snippet: it.encrypted_content ? '' : (it.text || it.content || '')
+              })).filter(it => it.url);
+              if (items.length) {
+                send('tool_result', { kind: 'search', results: items, label: 'Sources' });
+              }
+            }
+          }
+
+          const toolUses = (resp.content || []).filter(b => b.type === 'tool_use');
+
+          if (resp.stop_reason === 'end_turn' || toolUses.length === 0) {
+            const finalText = (resp.content || [])
+              .filter(b => b.type === 'text').map(b => b.text).join('\n').trim();
+            send('final', { text: finalText, assistant_content: resp.content });
+            break;
+          }
+
+          const toolResults = [];
+          for (const tu of toolUses) {
+            send('tool_call', { name: tu.name, input: tu.input });
+            try {
+              const { forModel, forUI } = await runTool(tu.name, tu.input || {});
+              send('tool_result', forUI);
+              toolResults.push({
+                type: 'tool_result',
+                tool_use_id: tu.id,
+                content: forModel,
+              });
+            } catch (e) {
+              const msg = String(e.message || e);
+              send('error', { text: `${tu.name}: ${msg}` });
+              toolResults.push({
+                type: 'tool_result',
+                tool_use_id: tu.id,
+                content: `Error: ${msg}`,
+                is_error: true,
+              });
+            }
+          }
+          messages.push({ role: 'user', content: toolResults });
+        }
+      } catch (e) {
+        send('error', { text: String(e.message || e) });
+      } finally {
+        send('done', { ok: true });
+        close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no',
+    },
+  });
+}
