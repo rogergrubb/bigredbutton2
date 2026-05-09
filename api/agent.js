@@ -99,6 +99,18 @@ const TOOLS = [
       required: ['text']
     }
   },
+  {
+    name: 'read_url',
+    description: 'Fetch a URL and return its text content (HTML stripped, capped at 12k chars). Use to read articles, docs, competitor pages, or any specific webpage the user references.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'Absolute URL to fetch (http or https).' },
+        max_chars: { type: 'number', default: 12000 }
+      },
+      required: ['url']
+    }
+  },
   // Anthropic server-side web search.
   { type: 'web_search_20250305', name: 'web_search', max_uses: 5 }
 ];
@@ -260,6 +272,37 @@ async function toolSpeak({ text, voice_id }) {
   return { url: `data:audio/mpeg;base64,${btoa(bin)}`, bytes: bytes.length };
 }
 
+
+async function toolReadUrl({ url, max_chars = 12000 }) {
+  if (!/^https?:\/\//.test(url)) throw new Error('URL must be http or https');
+  const r = await fetch(url, {
+    headers: {
+      'User-Agent': 'BigRedButton/0.6 (+https://bigredbutton.app)',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    },
+    redirect: 'follow',
+  });
+  if (!r.ok) throw new Error(`URL fetch ${r.status}`);
+  const ct = r.headers.get('content-type') || '';
+  const isHtml = ct.includes('html') || ct.includes('xml');
+  const raw = await r.text();
+  let text = raw;
+  if (isHtml) {
+    // Strip script/style, then tags, then collapse whitespace
+    text = raw
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+      .replace(/<!--[\s\S]*?-->/g, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+  }
+  text = text.replace(/\s+/g, ' ').trim();
+  if (text.length > max_chars) text = text.slice(0, max_chars) + '\n…[truncated]';
+  return { text, contentType: ct };
+}
+
+
 // ---------- Tool dispatcher ----------
 async function runTool(name, input) {
   if (name === 'plan') {
@@ -299,6 +342,13 @@ async function runTool(name, input) {
     return {
       forModel: 'Text deliverable emitted to UI.',
       forUI: { kind: 'text', text: input.text, label: input.label || 'Output' },
+    };
+  }
+  if (name === 'read_url') {
+    const { text, contentType } = await toolReadUrl(input);
+    return {
+      forModel: `Fetched ${input.url} (${contentType}, ${text.length} chars):\n\n${text}`,
+      forUI: { kind: 'text', text: text.slice(0, 1200) + (text.length > 1200 ? '\n…[full content sent to model]' : ''), label: 'Read: ' + input.url },
     };
   }
   throw new Error(`Unknown tool: ${name}`);

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Showcase — Big Red Button</title>
+<meta name="description" content="Real outputs from Mini-Me, the autonomous agent inside Big Red Button." />
+<meta property="og:title" content="Big Red Button — Showcase" />
+<meta property="og:description" content="Receipts from Mini-Me. Real outputs. One button each." />
+<meta property="og:image" content="https://bigredbutton.app/hero1.png" />
+<style>
+  :root{--bg:#0a0a0a;--panel:#111;--line:#1f1f1f;--ink:#ededed;--muted:#9a9a9a;--red:#e10600;--ok:#22c55e}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,sans-serif;line-height:1.55}
+  a{color:#fff;text-decoration:none}
+  .wrap{max-width:1180px;margin:0 auto;padding:24px}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
+  .brand{font-weight:800;font-size:18px}
+  .brand b{color:var(--red)}
+  nav a{color:var(--muted);font-size:13px;margin-left:18px}
+  nav a:hover{color:#fff}
+  h1{font-size:clamp(32px,5vw,52px);line-height:1.05;letter-spacing:-.02em;margin:0 0 8px;font-weight:800}
+  h1 .accent{color:var(--red)}
+  .lede{color:var(--muted);max-width:760px;margin:0 0 28px;font-size:16px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+  .card h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted)}
+  .card .label{font-weight:700;color:#fff;font-size:18px;margin:6px 0 4px}
+  .card .meta{color:var(--muted);font-size:13px;margin:0 0 10px}
+  .card video,.card img{width:100%;border-radius:10px;display:block}
+  .tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+  .tag{font-size:11px;padding:3px 7px;border-radius:6px;background:#1a1a1a;color:#cfcfcf;border:1px solid #2a2a2a}
+  .tag.live{background:#0c2a18;color:#7ce4a3;border-color:#1f5638}
+  footer{margin-top:48px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:12px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .cta{display:inline-block;margin-top:18px;background:var(--red);color:#fff;padding:12px 22px;border-radius:10px;font-weight:700;border:none;cursor:pointer;text-decoration:none}
+  .cta:hover{background:#ff2a1f}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">▣ BIG <b>RED</b> BUTTON</div>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/app">Launch agent</a>
+      <a href="https://github.com/rogergrubb/bigredbutton2" target="_blank" rel="noopener">GitHub</a>
+    </nav>
+  </header>
+
+  <h1>Receipts from <span class="accent">Mini-Me</span></h1>
+  <p class="lede">
+    Real outputs the autonomous agent produced end-to-end during the Runway 2026 API Hackathon week.
+    Total compute spend: ~$233. Headcount: 1.
+  </p>
+
+  <div class="grid">
+    <article class="card">
+      <h3>Submission film</h3>
+      <video src="/demo.mp4" controls playsinline poster="/hero1.png"></video>
+      <div class="label">60-second hackathon demo</div>
+      <p class="meta">Input → agent → 8 Runway endpoints → final output. Judge-readable in 10 seconds.</p>
+      <div class="tags"><span class="tag">gen4_image_turbo</span><span class="tag">gen4.5</span><span class="tag">gen4_aleph</span><span class="tag">avatars.create</span><span class="tag">gwm1_avatars</span><span class="tag">eleven_multilingual_v2</span><span class="tag">eleven_text_to_sound_v2</span><span class="tag">tasks API</span></div>
+    </article>
+
+    <article class="card">
+      <h3>Generated output</h3>
+      <video src="/listing.mp4" controls playsinline poster="/hero2.png"></video>
+      <div class="label">Real-estate listing video</div>
+      <p class="meta">A complete 30-second cinematic ad produced from a one-line property brief in 7 minutes for $1.80 — the agent orchestrated stills, motion, color grade, and music.</p>
+      <div class="tags"><span class="tag">7 min total</span><span class="tag">$1.80 compute</span></div>
+    </article>
+
+    <article class="card">
+      <h3>Founder clone</h3>
+      <video src="/avatar.mp4" controls playsinline poster="/hero1.png"></video>
+      <div class="label">AI-Roger talking head</div>
+      <p class="meta">Persistent custom avatar built with Runway <code>avatars.create</code> + ElevenLabs voice clone. Re-usable narrator for any future Mini-Me deliverable.</p>
+      <div class="tags"><span class="tag">avatars.create</span><span class="tag">gwm1_avatars</span><span class="tag">ElevenLabs IVC</span></div>
+    </article>
+
+    <article class="card">
+      <h3>Hero still</h3>
+      <img src="/hero1.png" alt="Coastal property hero shot" />
+      <div class="label">Coastal Florida luxury — golden hour</div>
+      <p class="meta">Single Runway <code>gen4_image_turbo</code> call, 1280×720, no post.</p>
+      <div class="tags"><span class="tag">gen4_image_turbo</span><span class="tag">1280×720</span></div>
+    </article>
+
+    <article class="card">
+      <h3>Hero still</h3>
+      <img src="/hero2.png" alt="Kitchen morning hero shot" />
+      <div class="label">Kitchen morning, soft window light</div>
+      <p class="meta">Lifestyle reference still for the same listing brief — generated in seconds.</p>
+      <div class="tags"><span class="tag">gen4_image_turbo</span></div>
+    </article>
+
+    <article class="card" style="background:linear-gradient(135deg,#1a0606,#0a0a0a);border-color:#2b0808">
+      <h3 style="color:#ff8a85">Try it yourself</h3>
+      <div class="label">The live agent</div>
+      <p class="meta">Same orchestration mechanic. Different outcome every time. Press the button.</p>
+      <a class="cta" href="/app">Launch Mini-Me ▶</a>
+    </article>
+  </div>
+
+  <footer>
+    <div>Big Red Button · Number One Son Software Development LLC · Runway 2026 API Hackathon</div>
+    <div>Built solo by Roger Grubb · ~$233 compute · 1 week</div>
+  </footer>
+</div>
+</body>
+</html>
