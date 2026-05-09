@@ -699,8 +699,8 @@ goBtn.addEventListener("click", (e) => {
   if (e.metaKey || e.ctrlKey) { runAgent({}); return; }
   if (__mode === "listening") { __stopAndFire(); return; }
   if (__mode === "firing") return;
-  // idle: if textarea has typed content, fire it; otherwise start mic
-  if ((promptEl.value || "").trim().length > 0) { runAgent({}); return; }
+  // idle: ALWAYS open the mic. The button is press-to-talk.
+  // To fire typed text without the mic: Cmd/Ctrl+click the button, or Cmd/Ctrl+Enter in the textarea.
   __startListening();
 });
 
