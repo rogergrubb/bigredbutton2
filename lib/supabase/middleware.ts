@@ -29,17 +29,25 @@ export async function updateSession(request: NextRequest) {
   );
 
   // IMPORTANT: do not put logic between createServerClient and getUser.
+  // Calling getUser() refreshes the Supabase session cookie when needed.
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
+
+  // API routes handle their own auth (they return JSON 401, not redirects).
+  // Middleware just refreshes the cookie for them and falls through.
+  if (pathname.startsWith("/api/")) {
+    return response;
+  }
+
   const isAuthRoute =
     pathname.startsWith("/login") ||
     pathname.startsWith("/signup") ||
     pathname.startsWith("/auth");
   const isPublic =
-    pathname === "/" || pathname.startsWith("/_next") || pathname.startsWith("/api/auth");
+    pathname === "/" || pathname.startsWith("/_next");
 
   if (!user && !isAuthRoute && !isPublic) {
     const url = request.nextUrl.clone();
