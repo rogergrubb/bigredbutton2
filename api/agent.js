@@ -224,9 +224,11 @@ async function runwayPollTask(taskId, { intervalMs = 4000, maxMs = 240000 } = {}
 }
 
 async function toolGenerateImage({ prompt, ratio = '1280:720' }) {
+  // gen4_image supports prompt-only generation (no reference image required).
+  // gen4_image_turbo (Nano Banana Pro) is reference-guided and would 400 without referenceImages>=1.
   const created = await runwayCreateTask({
     endpoint: 'text_to_image',
-    payload: { promptText: prompt, model: 'gen4_image_turbo', ratio, referenceImages: [] },
+    payload: { promptText: prompt, model: 'gen4_image', ratio },
   });
   const done = await runwayPollTask(created.id);
   const url = done.output && done.output[0];
