@@ -306,11 +306,16 @@ async function runTool(name, input) {
 
 // ---------- Skills (preset prompts that wrap the agent) ----------
 const SKILLS = {
-  research_brief: 'Research this topic with web_search and produce a one-page brief: %TOPIC%. Include 5–7 numbered citations and a short executive summary.',
-  build_landing: 'Build a complete one-page landing page (write_html) for: %TOPIC%. Modern, minimal, mobile-friendly, dark-mode default, hero + 3 sections + signup. Strong copy.',
-  image_to_motion: 'Generate a cinematic still for: %TOPIC%. Then animate it for 5 seconds. Return both deliverables.',
-  voice_clip: 'Read this aloud in Mini-Me voice with `speak`: %TOPIC%',
-  pitch_deck_html: 'Build a 6-slide pitch deck as a single HTML file (write_html) for: %TOPIC%. Use distinct sections per slide, large type, deep contrast. Slide nav with arrow keys would be great.',
+  research_brief:  'Research this topic with web_search and produce a one-page brief: %TOPIC%. Include 5–7 numbered citations as [1], [2]… and a short executive summary. Use write_text for the brief.',
+  build_landing:   'Build a complete one-page landing page (write_html) for: %TOPIC%. Modern, minimal, mobile-friendly, dark-mode default, hero + 3 sections + signup. Strong, specific copy. No external assets except via CDN.',
+  image_to_motion: 'Generate a cinematic still for: %TOPIC%. Then animate it for 5 seconds with subtle camera/subject motion. Return both deliverables.',
+  voice_clip:      'Read this aloud in Mini-Me voice with `speak`: %TOPIC%',
+  pitch_deck_html: 'Build a 6-slide pitch deck as a single HTML file (write_html) for: %TOPIC%. Use distinct sections per slide, large type, deep contrast. Slide-nav with arrow keys would be great.',
+  brand_kit:       'Design a brand kit for: %TOPIC%. Output a single HTML page (write_html) showing: logo concept (CSS+SVG), 5-color palette with hex codes, font pairing recommendation with web links, 3 mood-board image prompts, and one-paragraph brand voice description. Modern reference design.',
+  marketing_copy:  'Generate a marketing copy bundle for: %TOPIC%. Use write_text to deliver: 5 headline options, 3 CTA buttons, 5 social posts (X/LinkedIn-style), and one elevator pitch. Specific, vivid, no clichés.',
+  talking_head:    'Compose a 90-second persuasive script for: %TOPIC%. Output the script with write_text. Then narrate it in Mini-Me voice with speak (chunk into <600-char calls if needed).',
+  cold_email:      'Write a 5-touch cold-email sequence for: %TOPIC%. Use write_text. Each email: subject + body, under 120 words, casual, value-led, with a soft CTA. Number the emails 1–5.',
+  competitor_scan: 'Use web_search to identify the top 5 competitors for: %TOPIC%. For each, gather: positioning, pricing, key differentiator, recent news. Output a side-by-side comparison table with write_html.',
 };
 
 // ---------- Main handler ----------

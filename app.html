@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <title>Big Red Button — the universal autonomous agent</title>
 <meta name="description" content="One button. Whatever you ask for. The universal autonomous agent." />
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js" defer></script>
 <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='44' fill='%23e10600'/></svg>" />
 <style>
   :root{
@@ -125,6 +126,30 @@
 
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:10px 14px;border:1px solid #333;border-radius:10px;font-size:13px;z-index:9999;opacity:0;pointer-events:none;transition:opacity .15s}
   .toast.show{opacity:1;pointer-events:auto}
+
+  .status{display:grid;gap:6px}
+  .stat{display:flex;align-items:center;gap:8px;font-size:12.5px;color:#cfcfcf;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:#0d0d0d}
+  .stat .dot{width:8px;height:8px;border-radius:50%;background:#666;flex:0 0 auto}
+  .stat .dot.ok{background:var(--ok)}
+  .stat .dot.warn{background:var(--warn)}
+  .stat .dot.err{background:var(--red)}
+  .stat .name{font-weight:600;color:#e0e0e0}
+  .stat .meta{margin-left:auto;color:var(--dim);font-size:11.5px}
+
+
+  .md{font-size:14px;line-height:1.65;color:#e0e0e0}
+  .md h1,.md h2,.md h3{margin:18px 0 8px;color:#fff}
+  .md h1{font-size:22px}.md h2{font-size:18px}.md h3{font-size:15px}
+  .md p{margin:0 0 10px}
+  .md ul,.md ol{padding-left:22px;margin:0 0 10px}
+  .md a{color:#9ad7ff;text-decoration:underline}
+  .md code{background:#070707;border:1px solid var(--line);padding:1px 5px;border-radius:4px;font-family:var(--mono);font-size:12.5px}
+  .md pre{background:#070707;border:1px solid var(--line);border-radius:8px;padding:12px;overflow:auto}
+  .md blockquote{border-left:3px solid var(--line);padding-left:12px;color:var(--muted);margin:10px 0}
+  .md table{border-collapse:collapse;width:100%;margin:8px 0}
+  .md th,.md td{border:1px solid var(--line);padding:6px 10px;font-size:13px;text-align:left}
+  .md hr{border:none;border-top:1px solid var(--line);margin:14px 0}
+
 </style>
 </head>
 <body>
@@ -147,13 +172,23 @@
     <!-- LEFT: skills + artifact gallery -->
     <aside class="side">
       <section class="card">
+        <h3>Status</h3>
+        <div id="status" class="status"></div>
+      </section>
+
+      <section class="card">
         <h3>Skills</h3>
         <div class="skills">
           <div class="skill-btn" data-skill="build_landing"><div class="icon">▦</div><div class="meta"><span class="name">Build a landing page</span><span class="desc">Lovable-style HTML</span></div></div>
           <div class="skill-btn" data-skill="research_brief"><div class="icon">⌕</div><div class="meta"><span class="name">Research + brief</span><span class="desc">Perplexity-style sources</span></div></div>
+          <div class="skill-btn" data-skill="competitor_scan"><div class="icon">◩</div><div class="meta"><span class="name">Competitor scan</span><span class="desc">Top 5 + comparison</span></div></div>
           <div class="skill-btn" data-skill="image_to_motion"><div class="icon">▶</div><div class="meta"><span class="name">Image → motion clip</span><span class="desc">Runway gen4 + gen3a</span></div></div>
           <div class="skill-btn" data-skill="voice_clip"><div class="icon">♪</div><div class="meta"><span class="name">Voice clip</span><span class="desc">Mini-Me persona</span></div></div>
+          <div class="skill-btn" data-skill="talking_head"><div class="icon">¶</div><div class="meta"><span class="name">Persuasive narration</span><span class="desc">Script + Mini-Me voice</span></div></div>
           <div class="skill-btn" data-skill="pitch_deck_html"><div class="icon">◫</div><div class="meta"><span class="name">Pitch deck (HTML)</span><span class="desc">6-slide single file</span></div></div>
+          <div class="skill-btn" data-skill="brand_kit"><div class="icon">◔</div><div class="meta"><span class="name">Brand kit</span><span class="desc">Logo + palette + fonts</span></div></div>
+          <div class="skill-btn" data-skill="marketing_copy"><div class="icon">▢</div><div class="meta"><span class="name">Marketing copy</span><span class="desc">Headlines + CTA + posts</span></div></div>
+          <div class="skill-btn" data-skill="cold_email"><div class="icon">✎</div><div class="meta"><span class="name">Cold email seq</span><span class="desc">5-touch sequence</span></div></div>
         </div>
       </section>
 
@@ -333,7 +368,8 @@ function renderResultBox(payload){
     inner = '<iframe class="frame" src="' + url + '"></iframe>';
     actions = '<button data-act="open-blob" data-url="' + url + '">Open</button> <button data-act="download-html">Download</button> <button data-act="refine">Refine</button>';
   } else if (payload.kind === "text" && payload.text){
-    inner = '<pre>' + escapeHtml(payload.text) + '</pre>';
+    var md = (typeof window !== "undefined" && window.__renderMarkdown) ? window.__renderMarkdown(payload.text) : null;
+    inner = md ? ('<div class="md">' + md + '</div>') : ('<pre>' + escapeHtml(payload.text) + '</pre>');
     actions = '<button data-act="copy" data-text="' + escapeHtml(payload.text) + '">Copy</button> <button data-act="speak">Read aloud</button>';
   } else if (payload.kind === "search" && payload.results){
     const items = payload.results.slice(0,12).map((r,i) => '<div class="src"><a href="' + escapeHtml(r.url||"#") + '" target="_blank" rel="noopener">[' + (i+1) + '] ' + escapeHtml(r.title||r.url||"") + '</a>' + (r.snippet ? '<div class="snip">' + escapeHtml(r.snippet) + '</div>' : "") + '</div>').join("");
@@ -464,6 +500,45 @@ goBtn.addEventListener("click", () => runAgent({}));
 $("#goFollowup").addEventListener("click", () => runAgent({ isFollowup: true }));
 promptEl.addEventListener("keydown", e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") runAgent({}); });
 followupEl.addEventListener("keydown", e => { if ((e.metaKey || e.ctrlKey) && e.key === "Enter") runAgent({ isFollowup: true }); });
+
+// --- /api/health probe ---
+(async function loadHealth(){
+  try {
+    const r = await fetch("/api/health");
+    if (!r.ok) return;
+    const h = await r.json();
+    const stat = document.getElementById("status");
+    if (!stat) return;
+    const cap = h.capabilities || {};
+    const rows = [
+      { name: "Reasoning",     ok: cap.reasoning,     meta: h.model || "" },
+      { name: "Web search",    ok: cap.web_search,    meta: cap.web_search ? "live" : "needs Anthropic key" },
+      { name: "Build (HTML)",  ok: cap.write_html,    meta: "" },
+      { name: "Image",         ok: cap.generate_image,meta: cap.generate_image ? "Runway gen4" : "needs Runway key" },
+      { name: "Motion video",  ok: cap.animate_image, meta: cap.animate_image ? "Runway gen3a" : "needs Runway key" },
+      { name: "Voice (Mini-Me)", ok: cap.speak,       meta: cap.speak ? "ElevenLabs" : "needs ElevenLabs key" },
+    ];
+    stat.innerHTML = rows.map(r => `
+      <div class="stat">
+        <span class="dot ${r.ok ? "ok" : "warn"}"></span>
+        <span class="name">${r.name}</span>
+        <span class="meta">${r.meta}</span>
+      </div>`).join("");
+  } catch {}
+})();
+
+// --- markdown rendering for text results (uses marked from CDN) ---
+window.__renderMarkdown = function(text){
+  try {
+    if (window.marked) {
+      // Limit risk: marked only, no DOMPurify available — restrict to safe markdown render
+      window.marked.setOptions({ breaks: true, gfm: true, mangle: false, headerIds: false });
+      return window.marked.parse(text);
+    }
+  } catch {}
+  return null;
+};
+
 </script>
 </body>
 </html>
