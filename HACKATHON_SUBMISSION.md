@@ -5,7 +5,7 @@
 ---
 
 ## Project name
-**The Big Red Button** — Autonomous launch agent for solo founders
+**The Big Red Button** — Autonomous momentum capture for solo founders
 
 ## One-line description
 The Big Red Button watches what a solo founder is building, detects the traction signal, then uses Runway's API to turn that signal into a complete media product. Demo: it shipped Sleep Technology Super Channel.
