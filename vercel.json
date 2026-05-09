@@ -1,11 +1,6 @@
 {
   "cleanUrls": true,
   "trailingSlash": false,
-  "functions": {
-    "api/agent.js": {
-      "maxDuration": 300
-    }
-  },
   "headers": [
     {
       "source": "/(.*\\.(mp4|png|jpg|jpeg|gif|webp))",
@@ -20,4 +15,6 @@
       ]
     },
     {
-      "sou
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options"
