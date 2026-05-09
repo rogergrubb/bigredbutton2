@@ -3,56 +3,34 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Big Red Button — One button. Whatever you ask for.</title>
-<meta name="description" content="The universal autonomous agent. What Cowork does for files. What Manus does for tasks. What Perplexity does for research. What Lovable does for code. All combined. One button.">
+<title>Big Red Button — Autonomous momentum capture for solo founders</title>
+<meta name="description" content="When something starts working, solo founders don't need another idea. They need a button. The Big Red Button detects traction signals, then uses Runway's API to turn that signal into a complete media product.">
 <meta name="theme-color" content="#0a0c12">
-<meta property="og:title" content="Big Red Button — the universal autonomous agent">
-<meta property="og:description" content="State an outcome. Press one button. Mini-Me does the rest.">
+<meta property="og:title" content="The Big Red Button — Autonomous launch agent for solo founders">
+<meta property="og:description" content="Press the button on a traction signal. Get a complete media product. Powered by Runway.">
 <meta property="og:url" content="https://bigredbutton.app">
 <meta property="og:image" content="https://bigredbutton.app/hero1.png">
 <meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Big Red Button — the universal autonomous agent">
-<meta name="twitter:description" content="One button. Whatever you ask for.">
+<meta name="twitter:title" content="The Big Red Button — Autonomous launch agent for solo founders">
+<meta name="twitter:description" content="One signal. One button. One autonomous launch system.">
 <meta name="twitter:image" content="https://bigredbutton.app/hero1.png">
 <link rel="canonical" href="https://bigredbutton.app">
 <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><circle cx=%2750%27 cy=%2750%27 r=%2744%27 fill=%27%23ff5959%27/></svg>">
 <style>
   :root {
-    --bg: #0a0c12;
-    --bg-2: #14171f;
-    --panel: #1a1e28;
-    --border: #2a3140;
-    --text: #ecedf2;
-    --dim: #8b91a3;
-    --green: #58dc82;
-    --amber: #f0b43c;
-    --red: #ff5959;
-    --blue: #5fa8e6;
-    --purple: #b38ef0;
+    --bg: #0a0c12; --bg-2: #14171f; --panel: #1a1e28; --border: #2a3140;
+    --text: #ecedf2; --dim: #8b91a3; --green: #58dc82; --amber: #f0b43c;
+    --red: #ff5959; --blue: #5fa8e6; --purple: #b38ef0;
   }
   *,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-  }
+  html, body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; line-height: 1.6; -webkit-font-smoothing: antialiased; }
   .mono { font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace; }
   body { min-height: 100vh; }
   a { color: var(--blue); text-decoration: none; }
   a:hover { text-decoration: underline; }
 
-  /* Top bar */
-  .topbar {
-    background: #0f1118;
-    border-bottom: 1px solid var(--border);
-    padding: 14px 28px;
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 13px;
-    position: sticky; top: 0; z-index: 100;
-  }
+  .topbar { background: #0f1118; border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; justify-content: space-between; align-items: center; font-size: 13px; position: sticky; top: 0; z-index: 100; }
   .topbar .brand { color: var(--red); font-weight: 800; letter-spacing: 0.6px; font-size: 14px; }
   .topbar .meta { color: var(--dim); }
   .blink { animation: blink 1.2s steps(2,start) infinite; }
@@ -60,196 +38,71 @@
 
   main { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
 
-  /* Hero */
   .hero { padding: 80px 0 32px; text-align: center; }
-  .hero h1 {
-    font-size: clamp(40px, 7vw, 80px); font-weight: 900; line-height: 0.98;
-    letter-spacing: -2.5px; margin-bottom: 22px;
-  }
+  .hero h1 { font-size: clamp(40px, 7vw, 84px); font-weight: 900; line-height: 0.98; letter-spacing: -2.5px; margin-bottom: 22px; }
   .hero h1 .red { color: var(--red); }
   .hero h1 .accent { color: var(--green); }
-  .hero .sub {
-    font-size: clamp(17px, 2.1vw, 23px); color: var(--dim);
-    max-width: 820px; margin: 0 auto 18px; line-height: 1.5;
-  }
+  .hero .sub { font-size: clamp(17px, 2.1vw, 23px); color: var(--dim); max-width: 860px; margin: 0 auto 22px; line-height: 1.5; }
   .hero .sub strong { color: var(--text); font-weight: 600; }
-  .hero .demo-note {
-    font-size: 13px; color: var(--dim); font-style: italic; margin: 0 auto 32px;
-    max-width: 700px;
-  }
-  .video-frame {
-    background: var(--panel);
-    border: 1px solid var(--border);
-    border-radius: 8px; padding: 12px;
-    margin: 0 auto 32px;
-    aspect-ratio: 16/9;
-    max-width: 1080px;
-    box-shadow: 0 25px 60px -25px rgba(0,0,0,0.7);
-  }
-  .video-frame video { width: 100%; height: 100%; border-radius: 4px; background: #000; }
+  .hero .pithy { font-size: 16px; color: var(--amber); font-style: italic; max-width: 720px; margin: 0 auto 36px; line-height: 1.55; }
 
-  .ctas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
-  .cta {
-    display: inline-block; padding: 14px 26px; border-radius: 4px;
-    font-size: 14px; font-weight: 700; letter-spacing: 0.5px;
-    text-decoration: none; transition: transform 0.12s, opacity 0.12s;
-  }
-  .cta:hover { transform: translateY(-1px); text-decoration: none; }
-  .cta-primary { background: var(--red); color: #fff; }
-  .cta-secondary { background: transparent; color: var(--text); border: 1px solid var(--border); }
-  .cta-secondary:hover { border-color: var(--dim); }
+  .cta { display: inline-block; background: var(--red); color: #fff; font-weight: 800; padding: 16px 32px; border-radius: 12px; font-size: 17px; text-decoration: none; margin: 0 6px; letter-spacing: .02em; }
+  .cta:hover { background: #ff7373; text-decoration: none; }
+  .cta.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .cta.ghost:hover { background: var(--panel); }
 
-  /* Section header */
-  section { padding: 80px 0; border-top: 1px solid var(--border); }
-  section h2 {
-    font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
-    color: var(--amber); margin-bottom: 14px; text-transform: uppercase;
-  }
-  section h3 {
-    font-size: clamp(28px, 3.5vw, 44px); font-weight: 800; line-height: 1.12;
-    margin-bottom: 18px; letter-spacing: -0.6px;
-  }
-  section p.lead { font-size: 18px; color: var(--dim); max-width: 760px; margin-bottom: 32px; line-height: 1.5; }
+  .arrow-bar { display: flex; gap: 12px; justify-content: center; align-items: center; margin: 56px auto 12px; flex-wrap: wrap; max-width: 940px; font-family: var(--mono); font-size: 14px; color: var(--dim); letter-spacing: .08em; text-transform: uppercase; }
+  .arrow-bar .step { background: var(--panel); border: 1px solid var(--border); padding: 10px 16px; border-radius: 8px; }
+  .arrow-bar .step.hot { color: var(--red); border-color: #4a1c1f; background: #1d1116; }
+  .arrow-bar .arrow { color: #4a4f5e; }
 
-  /* What it is — superpower grid */
-  .superpowers {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    gap: 14px;
-  }
-  .super {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
-    padding: 24px;
-  }
-  .super .like { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--dim); margin-bottom: 8px; font-weight: 700; }
-  .super h4 { font-size: 22px; font-weight: 800; margin-bottom: 10px; color: var(--text); }
-  .super p { font-size: 14px; color: var(--dim); line-height: 1.5; }
-  .super.cowork h4 { color: var(--green); }
-  .super.manus h4 { color: var(--amber); }
-  .super.perplexity h4 { color: var(--blue); }
-  .super.lovable h4 { color: var(--purple); }
+  section.block { padding: 64px 0; border-top: 1px solid var(--border); }
+  section.block h2 { font-size: clamp(28px, 4vw, 44px); font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+  section.block h2 .red { color: var(--red); }
+  section.block h2 .accent { color: var(--green); }
+  section.block h3 { color: var(--amber); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 14px; font-weight: 700; }
+  section.block .lead { font-size: 18px; color: var(--dim); max-width: 760px; line-height: 1.6; margin-bottom: 28px; }
 
-  /* Workflow */
-  .flow {
-    display: flex; gap: 0; flex-wrap: wrap; align-items: center;
-    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
-    padding: 28px; margin-bottom: 24px;
-  }
-  .flow .step {
-    flex: 1; min-width: 110px;
-    text-align: center; padding: 16px 8px;
-    border: 1px solid var(--border); border-radius: 4px;
-    background: var(--bg-2);
-    font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
-    color: var(--text);
-  }
-  .flow .step.runway {
-    background: linear-gradient(180deg, #2d1d3d, #1d1428);
-    border-color: var(--amber); color: var(--amber);
-    box-shadow: 0 0 0 1px var(--amber), 0 0 24px -8px var(--amber);
-  }
-  .flow .arrow { color: var(--dim); padding: 0 6px; }
+  .signal { background: linear-gradient(135deg, #0e1620 0%, #14171f 100%); border: 1px solid #1c3346; border-radius: 18px; padding: 32px; margin: 24px 0; }
+  .signal .label { color: var(--green); font-family: var(--mono); font-size: 12px; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 12px; }
+  .signal h3 { color: var(--text); font-size: 22px; font-weight: 700; margin-bottom: 10px; letter-spacing: 0; text-transform: none; }
+  .signal .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 18px; margin-top: 20px; }
+  .signal .stat { background: #0a0e15; border: 1px solid #1c3346; border-radius: 10px; padding: 14px 16px; }
+  .signal .stat .num { font-size: 28px; font-weight: 800; color: var(--green); letter-spacing: -1px; }
+  .signal .stat .desc { font-size: 12px; color: var(--dim); margin-top: 2px; }
 
-  /* Endpoint grid */
-  .endpoints {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px; margin-bottom: 28px;
-  }
-  .endpoint {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
-    padding: 16px 18px;
-  }
-  .endpoint .name {
-    color: var(--green); font-weight: 700; font-size: 13px; margin-bottom: 4px;
-    font-family: 'SF Mono', monospace;
-  }
-  .endpoint .role { color: var(--dim); font-size: 12px; line-height: 1.4; }
+  .arc { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 28px; }
+  @media (max-width: 880px) { .arc { grid-template-columns: 1fr 1fr; } }
+  .arc .step { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+  .arc .step .num { color: var(--red); font-weight: 800; font-size: 14px; letter-spacing: .1em; margin-bottom: 8px; font-family: var(--mono); }
+  .arc .step h4 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+  .arc .step p { font-size: 13.5px; color: var(--dim); line-height: 1.55; }
 
-  /* Receipts gallery */
-  .gallery {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 16px;
-  }
-  .gallery .item {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
-    overflow: hidden;
-  }
-  .gallery .item img,
-  .gallery .item video {
-    width: 100%; aspect-ratio: 16/9; object-fit: cover; display: block; background: #000;
-  }
-  .gallery .item .caption { padding: 12px 14px; }
-  .gallery .item .caption .title { font-size: 14px; font-weight: 600; }
-  .gallery .item .caption .meta { font-size: 12px; color: var(--dim); margin-top: 2px; }
+  .cap-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 24px; }
+  @media (max-width: 800px) { .cap-grid { grid-template-columns: 1fr; } }
+  .cap { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+  .cap .head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .cap .label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--blue); font-family: var(--mono); }
+  .cap .role { font-size: 11px; color: var(--dim); }
+  .cap .name { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .cap .desc { font-size: 13px; color: var(--dim); }
 
-  /* Outcome examples list */
-  .outcomes {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-    gap: 12px; margin-bottom: 32px;
-  }
-  .outcome {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
-    padding: 18px 20px;
-  }
-  .outcome .verb { font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--amber); font-weight: 700; }
-  .outcome .what { font-size: 16px; font-weight: 600; color: var(--text); margin-top: 4px; }
-  .outcome .now { font-size: 12px; color: var(--dim); margin-top: 4px; font-style: italic; }
+  .channels { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 24px 0; }
+  @media (max-width: 800px) { .channels { grid-template-columns: 1fr; } }
+  .channel { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 22px; }
+  .channel .head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+  .channel .wave { color: var(--amber); font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; }
+  .channel .stats { color: var(--dim); font-size: 12.5px; font-family: var(--mono); }
+  .channel h4 { font-size: 18px; font-weight: 800; margin-bottom: 4px; }
+  .channel .tag { color: var(--green); font-style: italic; font-size: 13.5px; margin-bottom: 12px; }
+  .channel .what { font-size: 13.5px; color: var(--dim); line-height: 1.55; }
+  .channel a.visit { display: inline-block; margin-top: 12px; color: var(--blue); font-size: 13px; font-family: var(--mono); }
 
-  /* Memo block */
-  .memo {
-    background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
-    padding: 36px 40px; max-width: 820px;
-    font-size: 16px; line-height: 1.7;
-  }
-  .memo p { margin-bottom: 18px; color: var(--text); }
-  .memo p strong { color: var(--amber); }
-  .memo .signature { margin-top: 24px; color: var(--dim); }
+  .quote { font-size: clamp(20px, 3vw, 30px); line-height: 1.4; font-weight: 600; max-width: 820px; margin: 32px auto; text-align: center; color: var(--text); letter-spacing: -.5px; }
+  .quote .em { color: var(--red); }
 
-  /* Press the button form */
-  .press {
-    background: linear-gradient(180deg, var(--bg-2), var(--bg));
-    border: 1px solid var(--border); border-radius: 8px;
-    padding: 48px 40px; text-align: center; max-width: 720px; margin: 0 auto;
-  }
-  .press .button {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 220px; height: 220px; border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #ff7878, #c11515);
-    border: 5px solid #6b0808;
-    box-shadow: 0 14px 40px -14px rgba(193,21,21,0.7), inset 0 -12px 24px rgba(0,0,0,0.5);
-    color: #fff; font-weight: 900; font-size: 22px; letter-spacing: 1.5px;
-    margin: 28px auto;
-    cursor: pointer; transition: transform 0.12s, box-shadow 0.12s;
-    text-transform: uppercase;
-    border-style: solid;
-  }
-  .press .button:hover { transform: translateY(-2px); box-shadow: 0 20px 50px -14px rgba(255,90,90,0.6), inset 0 -12px 24px rgba(0,0,0,0.5); }
-  .press .button:active { transform: translateY(2px); }
-  .press input[type=email] {
-    background: var(--bg-2); border: 1px solid var(--border); color: var(--text);
-    padding: 12px 16px; border-radius: 4px; font-size: 14px; width: 320px;
-    max-width: 100%; outline: none; transition: border-color 0.15s;
-  }
-  .press input[type=email]:focus { border-color: var(--red); }
-  .press textarea {
-    background: var(--bg-2); border: 1px solid var(--border); color: var(--text);
-    padding: 12px 16px; border-radius: 4px; font-size: 14px; width: 100%;
-    max-width: 480px; outline: none; resize: vertical; font-family: inherit;
-    transition: border-color 0.15s;
-  }
-  .press textarea:focus { border-color: var(--red); }
-
-  /* Footer */
-  footer { padding: 36px 28px; color: var(--dim); font-size: 12px; text-align: center; border-top: 1px solid var(--border); }
+  footer { padding: 36px 28px; border-top: 1px solid var(--border); color: var(--dim); font-size: 13px; text-align: center; line-height: 1.7; }
   footer .links { margin-top: 8px; }
-  footer .links a { margin: 0 8px; color: var(--dim); }
-  footer .links a:hover { color: var(--text); }
-
-  @media (max-width: 700px) {
-    .flow { flex-direction: column; gap: 8px; }
-    .flow .arrow { transform: rotate(90deg); padding: 4px 0; }
-    .memo { padding: 24px; }
-    .press { padding: 32px 20px; }
-  }
 </style>
 </head>
 <body>
@@ -259,184 +112,140 @@
   <span class="meta mono">
     <a href="/app" style="color:var(--green);font-weight:700;text-decoration:none;margin-right:18px;">▶ Launch the agent</a>
     <a href="/showcase" style="color:var(--text);text-decoration:none;margin-right:18px;">Showcase</a>
+    <a href="/manifesto" style="color:var(--text);text-decoration:none;margin-right:18px;">Manifesto</a>
     Submitted ▸ Runway 2026 API Hackathon<span class="blink">_</span>
   </span>
 </div>
 
 <main>
 
-  <!-- HERO -->
-  <section class="hero" style="padding-top: 80px; border-top: none;">
-    <h1>One <span class="red">button.</span><br>Whatever you <span class="accent">ask for.</span></h1>
-    <p class="sub">
-      Big Red Button is the universal autonomous agent. State an outcome —
-      <strong>build a website, compose a video, research a market, train a clone, automate a workflow</strong> —
-      and the agent does the rest.
-    </p>
-    <p class="sub" style="margin-bottom: 12px;">
-      What <strong>Cowork</strong> does for files. What <strong>Manus</strong> does for tasks.
-      What <strong>Perplexity</strong> does for research. What <strong>Lovable</strong> does for code.
-      All combined. No gates. Fully autonomous.
-    </p>
-    <p class="demo-note">The demo below: a real-estate listing video — $5–$20, 5 minutes to 4 hours. <strong>One example. The agent does anything.</strong></p>
+<section class="hero">
+  <h1>When something starts working,<br>solo founders don't need <span class="accent">another idea.</span><br>They need <span class="red">a button.</span></h1>
+  <p class="sub">The Big Red Button is an <strong>autonomous launch agent for solo founders</strong>. It watches what you're building, detects what's getting traction, then uses Runway's API to generate the brand, videos, audio, multilingual variants, Shorts, thumbnails, and publishing plan needed to turn that signal into a real media product.</p>
+  <p class="pithy">Autonomous momentum capture. Built solo. Submitted to the Runway 2026 API Hackathon.</p>
 
-    <div class="video-frame">
-      <video controls preload="metadata" poster="">
-        <source src="./demo.mp4" type="video/mp4">
-        Your browser does not support video playback.
-      </video>
+  <div>
+    <a class="cta" href="/app">▶ Press the button</a>
+    <a class="cta ghost" href="/showcase">See the live demo</a>
+  </div>
+
+  <div class="arrow-bar">
+    <span class="step">SIGNAL</span>
+    <span class="arrow">→</span>
+    <span class="step">STRATEGY</span>
+    <span class="arrow">→</span>
+    <span class="step">MEDIA</span>
+    <span class="arrow">→</span>
+    <span class="step hot">LAUNCH</span>
+  </div>
+</section>
+
+<section class="block">
+  <h3>The signal that triggered this submission</h3>
+  <h2><span class="red">A faceless sleep channel</span> I made for myself <span class="accent">started growing.</span></h2>
+  <p class="lead">Not slowly. Not randomly. The curve kept climbing. May 8 — overnight — the analytics flagged a traction anomaly.</p>
+
+  <div class="signal">
+    <div class="label">▮ TRACTION ANOMALY · COUNCIL OF FIFTY · MAY 8 2026</div>
+    <h3>Faceless guided-meditation videos accelerated, not flattened.</h3>
+    <p style="color:var(--dim);font-size:14.5px;line-height:1.6">The algorithm noticed before I did. 83.4% of views came from <em>Suggested videos</em> — meaning YouTube itself is recommending the content. 32.2% retention on the welcome video, 9.1 hours total watch time, in 48 hours, with two subscribers, no marketing, no thumbnails optimized.</p>
+    <div class="stats">
+      <div class="stat"><div class="num">175</div><div class="desc">Views in 48h</div></div>
+      <div class="stat"><div class="num">9,240</div><div class="desc">Impressions</div></div>
+      <div class="stat"><div class="num">9.1h</div><div class="desc">Watch time</div></div>
+      <div class="stat"><div class="num">32.2%</div><div class="desc">Retention (top video)</div></div>
+      <div class="stat"><div class="num">83.4%</div><div class="desc">From "Suggested"</div></div>
+      <div class="stat"><div class="num">91</div><div class="desc">Videos shipped overnight</div></div>
     </div>
+  </div>
+</section>
 
-    <div class="ctas">
-      <a class="cta cta-primary" href="#press-it">▸ Press the Big Red Button</a>
-      <a class="cta cta-secondary" href="https://github.com/rogergrubb/bigredbutton2">▸ See the source</a>
-      <a class="cta cta-secondary" href="#stack">▸ Runway endpoints</a>
+<section class="block">
+  <h3>The arc — Signal · Strategy · Media · Launch</h3>
+  <h2>One unexpected signal becomes <span class="red">a complete content engine.</span></h2>
+  <p class="lead">The Big Red Button doesn't generate ideas. It captures momentum. When the algorithm starts rewarding something you're already building, the agent moves before the moment disappears.</p>
+
+  <div class="arc">
+    <div class="step"><div class="num">01 · SIGNAL</div><h4>Detect traction</h4><p>The agent watches your channels, apps, and analytics for acceleration patterns the algorithm has already started rewarding.</p></div>
+    <div class="step"><div class="num">02 · STRATEGY</div><h4>Extract the pattern</h4><p>Reads top-performing channels in the same vertical. Builds positioning, taxonomy, protocol structure, upload calendar.</p></div>
+    <div class="step"><div class="num">03 · MEDIA</div><h4>Generate the assets</h4><p>Runway's API does the work: video scenes, thumbnails, narration, multilingual dubs, Shorts, sound design, atmospheric grading.</p></div>
+    <div class="step"><div class="num">04 · LAUNCH</div><h4>Ship the system</h4><p>A complete channel — brand, video series, multilingual variants, short-form funnel, long-form library, upload schedule. Not assets. A system.</p></div>
+  </div>
+</section>
+
+<section class="block">
+  <h3>The demo · Sleep Technology Super Channel</h3>
+  <h2>Roger pressed the button. <span class="accent">The agent built a channel.</span></h2>
+  <p class="lead">Two channels are part of this submission. The first is the signal. The second is what the Big Red Button shipped in response.</p>
+
+  <div class="channels">
+    <div class="channel">
+      <div class="head">
+        <span class="wave">WAVE 1 · THE SIGNAL</span>
+        <span class="stats">91 videos · 5 langs · 175 views · climbing</span>
+      </div>
+      <h4>The Council of Fifty</h4>
+      <div class="tag">"We help you get to sleep."</div>
+      <p class="what">Identity-based meditations — <em>The Self That Said No</em>, <em>The Self At Peace With Money</em>, <em>The Self That Woke Before Dawn</em>. Shipped overnight by Cowork in Japanese, Spanish, French, Portuguese, German. Episodes 13 to 46 minutes. The shotgun experiment that proved velocity. The algorithm started recommending them within hours.</p>
+      <a class="visit" href="https://www.youtube.com/@TheCouncilOfFifty" target="_blank" rel="noopener">▶ youtube.com/@TheCouncilOfFifty</a>
     </div>
-  </section>
-
-  <!-- WHAT IT IS -->
-  <section>
-    <h2>What it is</h2>
-    <h3>Four superpowers. One button.</h3>
-    <p class="lead">
-      The autonomous-agent space has fragmented into a handful of tools that each do one slice well.
-      Big Red Button takes the strongest faculty from each and combines them into a single agent
-      with a single command surface.
-    </p>
-
-    <div class="superpowers">
-      <div class="super cowork">
-        <div class="like">like</div>
-        <h4>Cowork</h4>
-        <p>File and desktop control. MCP-style tool use. Runs locally with full system access. Persistent agents that don't reset.</p>
+    <div class="channel">
+      <div class="head">
+        <span class="wave">WAVE 2 · THE LAUNCH</span>
+        <span class="stats">PROTOCOL 001 live · 50 drafts queued</span>
       </div>
-      <div class="super manus">
-        <div class="like">like</div>
-        <h4>Manus</h4>
-        <p>Long-horizon planning. Reflection. Course-correction. Multi-step task execution that doesn't lose the thread.</p>
-      </div>
-      <div class="super perplexity">
-        <div class="like">like</div>
-        <h4>Perplexity</h4>
-        <p>Live research with cited sources. Conversational. Pulls real facts from the web when planning needs ground truth.</p>
-      </div>
-      <div class="super lovable">
-        <div class="like">like</div>
-        <h4>Lovable</h4>
-        <p>Natural language to working code. Ship a deployable web app from a prompt. Vibe-coded, iterated, shipped.</p>
-      </div>
+      <h4>Sleep Technology Super Channel</h4>
+      <div class="tag">"Engineered sleep for overactive minds."</div>
+      <p class="what">Same factory, sharper brand. Premium tech-positioned channel. PROTOCOL 001: Brown Noise Black Screen — 10 hours, deep sleep, sleep technology. PROTOCOL 002 ships next: 7-Minute Mental Shutdown + Rain. Each episode = one Big Red Button press. Built by the agent. The launch product.</p>
+      <a class="visit" href="https://www.youtube.com/@SleepTechSuperChannel" target="_blank" rel="noopener">▶ youtube.com/@SleepTechSuperChannel</a>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- WHAT IT DOES — outcome list -->
-  <section>
-    <h2>What you can press for</h2>
-    <h3>Anything you'd otherwise hire someone to do.</h3>
-    <p class="lead">A short list of outcomes Big Red Button delivers in production today. Press one button, state the outcome, walk away.</p>
-    <div class="outcomes">
-      <div class="outcome"><div class="verb">build</div><div class="what">A real-estate listing video for any property</div><div class="now">5 min – 4 hr · $5–$20 · proven (see demo)</div></div>
-      <div class="outcome"><div class="verb">build</div><div class="what">A landing page from a one-line brief</div><div class="now">Lovable-style vibe coding, deployed to Vercel</div></div>
-      <div class="outcome"><div class="verb">research</div><div class="what">A competitive landscape, sourced and structured</div><div class="now">Perplexity-style live web research with citations</div></div>
-      <div class="outcome"><div class="verb">automate</div><div class="what">A multi-step content pipeline across YouTube channels</div><div class="now">Generate 100 videos × 10 languages in 2 channels overnight</div></div>
-      <div class="outcome"><div class="verb">compose</div><div class="what">A pitch film with avatar narration and music</div><div class="now">Runway gen4.5 + ElevenLabs + ffmpeg orchestration</div></div>
-      <div class="outcome"><div class="verb">train</div><div class="what">A custom clone of yourself that handles your inbox</div><div class="now">Runway avatars.create + voice clone + LLM brain</div></div>
-      <div class="outcome"><div class="verb">orchestrate</div><div class="what">An MCP-style toolchain from natural language</div><div class="now">Cowork-style file/desktop/web control</div></div>
-      <div class="outcome"><div class="verb">build</div><div class="what">An SEO content site, generated and deployed end-to-end</div><div class="now">85+ live domains as proof of pattern</div></div>
-    </div>
-  </section>
+<section class="block">
+  <h3>The Runway capability stack</h3>
+  <h2>Every protocol video uses <span class="red">the entire Runway API surface.</span></h2>
+  <p class="lead">Not one endpoint. Not three. Eleven, chained — and orchestrated through the tasks API as the spine.</p>
 
-  <!-- HOW IT WORKS -->
-  <section>
-    <h2>How it works</h2>
-    <h3>State the outcome. The agent does the rest.</h3>
-    <div class="flow">
-      <div class="step">OUTCOME</div>
-      <div class="arrow">→</div>
-      <div class="step">MINI-ME</div>
-      <div class="arrow">→</div>
-      <div class="step">PLAN</div>
-      <div class="arrow">→</div>
-      <div class="step runway">APIS</div>
-      <div class="arrow">→</div>
-      <div class="step">EXECUTE</div>
-      <div class="arrow">→</div>
-      <div class="step">DELIVER</div>
-    </div>
-    <p class="lead">
-      Mini-Me is the orchestrator. Runway is the creative engine. Other APIs (ElevenLabs, search, code execution,
-      file ops) are the limbs. The user only ever sees the button and the result.
-    </p>
-  </section>
+  <div class="cap-grid">
+    <div class="cap"><div class="head"><span class="label">gen4_image</span><span class="role">visuals</span></div><div class="name">Cinematic sleep scenes</div><div class="desc">Dreamscape stills, banner art, thumbnail concepts.</div></div>
+    <div class="cap"><div class="head"><span class="label">gen4_image_turbo</span><span class="role">edit</span></div><div class="name">Reference-guided iteration</div><div class="desc">Nano-Banana Pro tier — refine a still while keeping subject consistency.</div></div>
+    <div class="cap"><div class="head"><span class="label">gen4.5</span><span class="role">video</span></div><div class="name">Image → motion</div><div class="desc">Slow ethereal drift over each protocol's hero still.</div></div>
+    <div class="cap"><div class="head"><span class="label">gen4_aleph</span><span class="role">v2v</span></div><div class="name">Atmospheric grade</div><div class="desc">Transform raw footage into premium sleep-lab visuals.</div></div>
+    <div class="cap"><div class="head"><span class="label">gen3a_turbo</span><span class="role">i2v</span></div><div class="name">Start+end frame motion</div><div class="desc">Impossible cinematic transitions between two key frames.</div></div>
+    <div class="cap"><div class="head"><span class="label">avatars.create</span><span class="role">persona</span></div><div class="name">Mini-Me persistent twin</div><div class="desc">The agent has a face — re-usable across every output.</div></div>
+    <div class="cap"><div class="head"><span class="label">eleven_multilingual_v2</span><span class="role">tts</span></div><div class="name">Guided shutdown narration</div><div class="desc">Roger's cloned voice — every protocol speaks with the same calm.</div></div>
+    <div class="cap"><div class="head"><span class="label">eleven_text_to_sound_v2</span><span class="role">sfx</span></div><div class="name">Atmosphere &amp; rain beds</div><div class="desc">Brown noise, ambient pads, cinematic low hits, rain on glass.</div></div>
+    <div class="cap"><div class="head"><span class="label">voice dubbing</span><span class="role">i18n</span></div><div class="name">Multilingual variants</div><div class="desc">One narration becomes 5 languages — the algorithm rewards each independently.</div></div>
+    <div class="cap"><div class="head"><span class="label">voice isolation</span><span class="role">cleanup</span></div><div class="name">Lift narrators from real footage</div><div class="desc">Pre-existing recordings repurposed without re-recording.</div></div>
+    <div class="cap"><div class="head"><span class="label">tasks API</span><span class="role">spine</span></div><div class="name">Orchestration backbone</div><div class="desc">Submit → poll → retrieve. Every chained run rides this.</div></div>
+  </div>
+</section>
 
-  <!-- THE STACK -->
-  <section id="stack">
-    <h2>The Stack — Runway</h2>
-    <h3>Eight Runway endpoints, orchestrated end-to-end.</h3>
-    <p class="lead">For the hackathon demo, the agent calls these. The full orchestration code is open-source.</p>
-    <div class="endpoints">
-      <div class="endpoint"><div class="name">gen4_image_turbo</div><div class="role">Hero stills (Nano Banana Pro tier) — face-locked references</div></div>
-      <div class="endpoint"><div class="name">gen4.5</div><div class="role">Image-to-video motion clips</div></div>
-      <div class="endpoint"><div class="name">gen4_aleph</div><div class="role">Cinematic color grade pass</div></div>
-      <div class="endpoint"><div class="name">avatars.create</div><div class="role">Persistent custom avatar (the user's clone)</div></div>
-      <div class="endpoint"><div class="name">gwm1_avatars</div><div class="role">Audio-driven avatar talking-head video</div></div>
-      <div class="endpoint"><div class="name">eleven_multilingual_v2</div><div class="role">Voice-over narration via cloned voice</div></div>
-      <div class="endpoint"><div class="name">eleven_text_to_sound_v2</div><div class="role">Music bed and sound effects</div></div>
-      <div class="endpoint"><div class="name">tasks API</div><div class="role">Submit / poll / retrieve orchestration spine</div></div>
-    </div>
-  </section>
+<section class="block">
+  <h3>The thesis</h3>
+  <p class="quote">Solo founders <span class="em">don't need more ideas.</span><br>They need to know what's working. <br>And when it works, they need <span class="em">a button.</span></p>
+  <p class="lead" style="text-align:center;max-width:780px;margin:0 auto">That's what the Big Red Button does. Mini-Me is the persona. Claude Dispatch is the orchestrator. Cowork is the executor. Runway is the engine. The output is a launchable media product, every single time.</p>
+  <div style="text-align:center;margin-top:32px">
+    <a class="cta" href="/app">▶ Press it yourself</a>
+    <a class="cta ghost" href="/manifesto">Read the manifesto</a>
+  </div>
+</section>
 
-  <!-- RECEIPTS -->
-  <section>
-    <h2>Receipts — what the agent actually built</h2>
-    <h3>Real outputs from real API calls during this hackathon week.</h3>
-    <p class="lead">The agent did the work. Below: a finished real-estate listing video, the founder's avatar clone, two hero stills generated from a brief.</p>
-    <div class="gallery">
-      <div class="item">
-        <video controls preload="metadata"><source src="./listing.mp4" type="video/mp4"></video>
-        <div class="caption">
-          <div class="title">Coastal Escape — 1234 Driftwood Lane</div>
-          <div class="meta">30s listing video · NOS_listing_v2.mp4 · agent output</div>
-        </div>
-      </div>
-      <div class="item">
-        <video controls preload="metadata"><source src="./avatar.mp4" type="video/mp4"></video>
-        <div class="caption">
-          <div class="title">AI-Roger talking head</div>
-          <div class="meta">avatars.create + gwm1_avatars · founder clone</div>
-        </div>
-      </div>
-      <div class="item">
-        <img src="./hero1.png" alt="Coastal property hero shot">
-        <div class="caption">
-          <div class="title">Coastal exterior — gen4_image_turbo</div>
-          <div class="meta">Generated from brief, face-locked reference</div>
-        </div>
-      </div>
-      <div class="item">
-        <img src="./hero2.png" alt="Modern kitchen morning">
-        <div class="caption">
-          <div class="title">Kitchen morning — gen4_image_turbo</div>
-          <div class="meta">Lifestyle B-roll for cinematic listing</div>
-        </div>
-      </div>
-    </div>
-  </section>
+</main>
 
-  <!-- MEMO -->
-  <section>
-    <h2>Memo to Cris</h2>
-    <h3>You built the APIs. We built the universal agent that orchestrates them.</h3>
+<footer>
+  <div>The Big Red Button · Autonomous launch agent for solo founders · Submitted to the Runway 2026 API Hackathon</div>
+  <div class="links">
+    <a href="/app">Live agent</a> ·
+    <a href="/showcase">Showcase</a> ·
+    <a href="/manifesto">Manifesto</a> ·
+    <a href="https://github.com/rogergrubb/bigredbutton2" target="_blank" rel="noopener">GitHub</a> ·
+    <a href="https://www.youtube.com/@TheCouncilOfFifty" target="_blank" rel="noopener">@TheCouncilOfFifty</a> ·
+    <a href="https://www.youtube.com/@SleepTechSuperChannel" target="_blank" rel="noopener">@SleepTechSuperChannel</a> ·
+    <a href="mailto:roger@grubb.net">roger@grubb.net</a>
+  </div>
+</footer>
 
-    <div class="memo">
-      <p><strong>From:</strong> Roger Grubb — Founder, Number One Son Software Development<br>
-      <strong>To:</strong> Cris Valenzuela — CEO, Runway<br>
-      <strong>Re:</strong> The universal agent layer your APIs deserve.</p>
-
-      <p>You built the engine. Multiple companies — Cowork, Manus, Perplexity, Lovable — each built one
-      faculty of an autonomous agent and stopped there. None of them combined the faculties into a single
-      agent that takes an outcome and ships the deliverable.</p>
-
-      <p>Big Red Button is that agent.</p>
-
-      <p>State an outcome — build a video, build a website, research a market, train a clone, automate a pipeline.
-  
+</body>
+</html>

@@ -367,6 +367,7 @@ async function runTool(name, input) {
 
 // ---------- Skills (preset prompts that wrap the agent) ----------
 const SKILLS = {
+  // Original universal skills (kept for general-purpose use)
   research_brief:  'Research this topic with web_search and produce a one-page brief: %TOPIC%. Include 5–7 numbered citations as [1], [2]… and a short executive summary. Use write_text for the brief.',
   build_landing:   'Build a complete one-page landing page (write_html) for: %TOPIC%. Modern, minimal, mobile-friendly, dark-mode default, hero + 3 sections + signup. Strong, specific copy. No external assets except via CDN.',
   image_to_motion: 'Generate a cinematic still for: %TOPIC%. Then animate it for 5 seconds with subtle camera/subject motion. Return both deliverables.',
@@ -374,9 +375,21 @@ const SKILLS = {
   pitch_deck_html: 'Build a 6-slide pitch deck as a single HTML file (write_html) for: %TOPIC%. Use distinct sections per slide, large type, deep contrast. Slide-nav with arrow keys would be great.',
   brand_kit:       'Design a brand kit for: %TOPIC%. Output a single HTML page (write_html) showing: logo concept (CSS+SVG), 5-color palette with hex codes, font pairing recommendation with web links, 3 mood-board image prompts, and one-paragraph brand voice description. Modern reference design.',
   marketing_copy:  'Generate a marketing copy bundle for: %TOPIC%. Use write_text to deliver: 5 headline options, 3 CTA buttons, 5 social posts (X/LinkedIn-style), and one elevator pitch. Specific, vivid, no clichés.',
-  talking_head:    'Compose a 90-second persuasive script for: %TOPIC%. Output the script with write_text. Then narrate it in Mini-Me voice with speak (chunk into <600-char calls if needed).',
   cold_email:      'Write a 5-touch cold-email sequence for: %TOPIC%. Use write_text. Each email: subject + body, under 120 words, casual, value-led, with a soft CTA. Number the emails 1–5.',
   competitor_scan: 'Use web_search to identify the top 5 competitors for: %TOPIC%. For each, gather: positioning, pricing, key differentiator, recent news. Output a side-by-side comparison table with write_html.',
+
+  // === LAUNCH AGENT SKILLS — the autonomous-momentum-capture vertical slice ===
+  analyze_signal: 'A solo founder noticed a traction signal: %TOPIC%. Use web_search if a YouTube channel URL or app/site is named, otherwise reason from what they describe. Identify: (1) what genre/category this falls in, (2) what specific pattern is working (length, format, language, presentation), (3) the top 3 channels/apps doing it well right now, (4) what is the WINNING TEMPLATE the algorithm seems to reward. Output a structured strategic memo with write_text. End with a one-line recommendation: should they double down, pivot, or move on.',
+
+  build_channel_strategy: 'A solo founder wants to launch around this signal: %TOPIC%. Build them a complete YouTube channel strategy as a single HTML page (write_html). Include: channel name + tagline + brand positioning, full visual identity (3-color palette + font pairing + logo concept SVG), playlist taxonomy with at least 4 distinct series, naming convention (e.g., PROTOCOL N, EPISODE N), 10 video concepts spanning short-form and long-form, a 30-day upload calendar with specific dates and titles, and a multilingual rollout plan. Make it cinematic, modern, dark mode, premium tech aesthetic. The whole thing should look like a launch brief a $1B founder would commission from a top agency.',
+
+  generate_protocol: 'A solo founder wants the next protocol video for: %TOPIC%. Build the complete production package: (1) call generate_image to create a cinematic hero still for the protocol cover/thumbnail, (2) call animate_image to produce a slow ethereal motion clip from the still, (3) call speak to render a 30-60 second guided shutdown narration intro in Mini-Me voice, (4) use write_text to output the full 7-minute script, video title (with PROTOCOL N convention), description with timestamps, 8 SEO tags, and YouTube upload instructions. The aesthetic must be premium sleep-tech: dark, calming, engineered for overactive minds.',
+
+  thumbnail_pack: 'A solo founder needs YouTube thumbnails for: %TOPIC%. Call generate_image FOUR times to produce 4 distinct thumbnail concepts at 1280:720 ratio. Each thumbnail prompt should be cinematic, premium, attention-grabbing in YouTube grid view, and tonally consistent with sleep-tech / engineered-calm aesthetic. After all four images render, write_text a one-paragraph brief explaining which thumbnail tests strongest and why.',
+
+  multilingual_pack: 'A solo founder wants to internationalize this content: %TOPIC%. Use write_text to produce: (1) the original English narration script (200-400 words), (2) translated narration scripts for Spanish, Portuguese, French, German, Japanese — each fully localized, not just translated, with cultural cadence appropriate to sleep/meditation in each language, (3) localized YouTube titles + descriptions for each language, (4) recommended thumbnail variations per language. Then call speak for each language using eleven_multilingual_v2 to produce voice samples (chunk under 600 chars).',
+
+  detect_traction: 'Analyze whether this signal is real traction or noise: %TOPIC%. Use web_search to look up the named channel/app/product. Compare its recent metrics (if observable from public info) to category baselines. Output a write_text verdict: (a) Is the signal real? (b) What is the curve doing — accelerating, plateauing, decaying? (c) Recommended action: ship a launch system NOW, gather more data, or move on. Be honest, founder-grade — this is not cheerleading, it is decision support.',
 };
 
 // ---------- Main handler ----------
