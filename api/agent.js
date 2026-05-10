@@ -58,13 +58,15 @@ const TOOLS = [
   },
   {
     name: 'animate_image',
-    description: 'Turn a still image into a motion video (Runway gen3a_turbo). Pass an image URL and describe the camera/subject motion.',
+    description: 'Turn a still image into a cinematic motion video using Runway gen4.5 (flagship — exceptional motion quality, physics simulation, prompt adherence). Returns a finished MP4 if Runway lands within the Edge function budget, otherwise a task_id to poll. Pass an image URL and describe the camera/subject motion.',
     input_schema: {
       type: 'object',
       properties: {
         image_url: { type: 'string' },
         prompt:    { type: 'string' },
         duration:  { type: 'number', default: 5 },
+        ratio:     { type: 'string', default: '720:1280', description: 'Output aspect ratio. 720:1280 vertical short-form, 1280:720 horizontal cinematic.' },
+        model:     { type: 'string', default: 'gen4.5', description: 'gen4.5 (cinematic flagship) | gen4_turbo (fast) | gen3a_turbo (legacy).' },
         label:     { type: 'string' }
       },
       required: ['image_url', 'prompt']
@@ -327,21 +329,25 @@ async function toolGenerateImage({ prompt, ratio = '1280:720' }) {
   return { url, ratio, prompt };
 }
 
-async function toolAnimateImage({ image_url, prompt, duration = 5 }) {
+async function toolAnimateImage({ image_url, prompt, duration = 5, ratio = '720:1280', model = 'gen4.5' }) {
+  // gen4.5 = Runway's flagship cinematic model (replaces gen3a_turbo).
+  // Non-blocking: returns task_id immediately. Caller does a short inline poll then falls back to client-side poll_task.
   const created = await runwayCreateTask({
     endpoint: 'image_to_video',
     payload: {
       promptImage: image_url,
       promptText: prompt,
-      model: 'gen3a_turbo',
+      model,
       duration,
-      ratio: '1280:768',
+      ratio,
     },
   });
-  const done = await runwayPollTask(created.id, { maxMs: 360000 });
-  const url = done.output && done.output[0];
-  if (!url) throw new Error('Runway returned no video URL');
-  return { url, duration, prompt };
+  // Try a short inline poll inside Edge budget. If task isn't done, return task_id.
+  const done = await runwayPollTask(created.id, { maxMs: 12000, intervalMs: 2000 }).catch(() => null);
+  if (done && done.output && done.output[0]) {
+    return { url: done.output[0], duration, prompt, model };
+  }
+  return { taskId: created.id, duration, prompt, model, pending: true };
 }
 
 async function toolSpeak({ text, voice_id }) {
@@ -567,10 +573,16 @@ async function runTool(name, input) {
     };
   }
   if (name === 'animate_image') {
-    const { url, duration, prompt } = await toolAnimateImage(input);
+    const r = await toolAnimateImage(input);
+    if (r.url) {
+      return {
+        forModel: `Generated video url: ${r.url} (model=${r.model}, duration ${r.duration}s)`,
+        forUI: { kind: 'video', url: r.url, label: input.label || 'Motion clip' },
+      };
+    }
     return {
-      forModel: `Generated video url: ${url} (duration ${duration}s)`,
-      forUI: { kind: 'video', url, label: input.label || 'Motion clip' },
+      forModel: `animate_image task started. taskId=${r.taskId} (model=${r.model}). Use poll_task with task_id="${r.taskId}" in 30-90s to retrieve the MP4.`,
+      forUI: { kind: 'text', text: `Motion clip pending. task_id=${r.taskId}. Use poll_task tool to fetch the MP4 (30-180s).`, label: input.label || 'Motion clip pending', taskId: r.taskId },
     };
   }
   if (name === 'speak') {
