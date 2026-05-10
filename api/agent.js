@@ -148,7 +148,7 @@ const TOOLS = [
   },
   {
     name: 'scene_with_characters',
-    description: 'Generate a still image with face-locked character references via Runway gen4_image_turbo (Nano Banana Pro tier). Use this for every scene shot in a multi-scene piece so the same faces appear in every frame.',
+    description: 'Generate a still image with face-locked character references via Runway gen4_image_turbo. Pass either character_refs (in-session names) or reference_image_urls (explicit HTTPS portrait URLs from prior lock_character outputs) — the URL form is REQUIRED across multiple agent turns.',
     input_schema: {
       type: 'object',
       properties: {
@@ -156,25 +156,31 @@ const TOOLS = [
         character_refs: {
           type: 'array',
           items: { type: 'string' },
-          description: 'Array of character names previously registered via lock_character. Up to 3.'
+          description: 'Names of characters registered via lock_character in the current request.'
+        },
+        reference_image_urls: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Explicit HTTPS portrait URLs to use as character references. Use this when continuing across turns since session lookups will be empty.'
         },
         ratio: { type: 'string', default: '720:1280' },
         label: { type: 'string' }
       },
-      required: ['prompt', 'character_refs']
+      required: ['prompt']
     }
   },
   {
     name: 'talking_head',
-    description: 'Render a lip-synced talking-head video of a registered character speaking a line. Pipeline: Runway avatar_videos with speech.type:text using the avatar voice configured at lock_character time. Single call returns finished MP4. Use one talking_head call per spoken line.',
+    description: 'Render a lip-synced talking-head video of a registered character speaking a line. Use either character (lookup in current session) OR avatar_id (explicit Runway avatar id from a prior lock_character call) — the avatar_id form is REQUIRED across multiple agent turns since SESSION is not persisted between requests. Returns finished MP4 if it lands within the Edge budget, otherwise a task_id to poll.',
     input_schema: {
       type: 'object',
       properties: {
-        character: { type: 'string', description: 'Character name registered via lock_character.' },
-        text:      { type: 'string', description: 'Line of dialogue to be spoken (under ~250 chars per call).' },
+        character: { type: 'string', description: 'Character name registered via lock_character (this turn only).' },
+        avatar_id: { type: 'string', description: 'Explicit Runway avatar id from a prior lock_character tool_result. Use this when continuing across turns.' },
+        text:      { type: 'string', description: 'Line of dialogue (under ~250 chars).' },
         label:     { type: 'string' }
       },
-      required: ['character', 'text']
+      required: ['text']
     }
   },
   {
@@ -518,20 +524,26 @@ async function runwayCreateAvatarVideo({ avatarId, audioUrl, text }) {
   return { taskId: j.id };
 }
 
-async function toolGenerateImageWithRefs({ prompt, character_refs = [], ratio = '720:1280' }) {
-  // gen4_image_turbo with referenceImages — face-locked stills
-  const referenceImages = character_refs.map(name => {
+async function toolGenerateImageWithRefs({ prompt, character_refs = [], reference_image_urls = [], ratio = '720:1280' }) {
+  // gen4_image_turbo with referenceImages — face-locked stills.
+  // Accept either in-session character names OR explicit URLs (preferred for cross-turn continuity).
+  const refs = [];
+  for (const url of reference_image_urls) {
+    refs.push({ uri: url, tag: `ref${refs.length+1}` });
+  }
+  for (const name of character_refs) {
     const c = SESSION.characters[name];
     if (!c || !c.portrait_url) {
-      throw new Error(`character_refs: '${name}' is not registered. Call lock_character first.`);
+      throw new Error(`character_refs: '${name}' is not registered in this session. Pass reference_image_urls instead with the URL from a prior lock_character tool_result.`);
     }
-    return { uri: c.portrait_url, tag: name };
-  });
+    refs.push({ uri: c.portrait_url, tag: name });
+  }
+  if (refs.length === 0) throw new Error('scene_with_characters needs at least one character_refs or reference_image_urls entry.');
   const payload = {
     promptText: prompt,
     model: 'gen4_image_turbo',
     ratio,
-    referenceImages,
+    referenceImages: refs,
   };
   const created = await runwayCreateTask({ endpoint: 'text_to_image', payload });
   const done = await runwayPollTask(created.id);
@@ -610,7 +622,7 @@ async function runTool(name, input) {
     }
     SESSION.characters[charName] = { avatarId, portrait_url, voicePreset };
     return {
-      forModel: `Character '${charName}' locked. avatarId=${avatarId || 'null'}. voicePreset=${voicePreset}. ${avatarErr ? 'Error: ' + avatarErr : 'Ready for talking_head.'}`,
+      forModel: `LOCKED character='${charName}' avatarId='${avatarId || 'null'}' voicePreset='${voicePreset}' portrait_url='${portrait_url}'. To use across future turns: pass avatar_id='${avatarId || 'null'}' to talking_head and pass reference_image_urls=['${portrait_url}'] to scene_with_characters. ${avatarErr ? 'Error: ' + avatarErr : ''}`,
       forUI: avatarErr
         ? { kind: 'text', text: `Avatar create error for '${charName}':\n${avatarErr}\n\nPortrait stored — scene_with_characters will still work for face-locked stills.`, label: `Locked: ${charName} (debug)` }
         : { kind: 'image', url: portrait_url, label: `Locked: ${charName} (voice: ${voicePreset})` },
@@ -633,24 +645,26 @@ async function runTool(name, input) {
     };
   }
   if (name === 'talking_head') {
-    const { character, text, label } = input;
-    const charObj = SESSION.characters[character];
-    if (!charObj) throw new Error(`talking_head: character '${character}' not locked. Call lock_character first.`);
-    if (!charObj.avatarId) throw new Error(`talking_head: character '${character}' has no avatar (avatar create failed).`);
-    // Wait briefly for the avatar to reach READY if it isn't already
-    try { await runwayWaitAvatarReady(charObj.avatarId, { maxMs: 8000 }); } catch (e) { /* surface in next step */ }
-    const { taskId } = await runwayCreateAvatarVideo({ avatarId: charObj.avatarId, text });
+    const { character, avatar_id, text, label } = input;
+    let resolvedAvatarId = avatar_id;
+    if (!resolvedAvatarId && character) {
+      const charObj = SESSION.characters[character];
+      if (charObj && charObj.avatarId) resolvedAvatarId = charObj.avatarId;
+    }
+    if (!resolvedAvatarId) throw new Error(`talking_head requires either avatar_id (preferred) or character (in-session). Provide avatar_id from a prior lock_character tool_result.`);
+    try { await runwayWaitAvatarReady(resolvedAvatarId, { maxMs: 8000 }); } catch (e) { /* surface in next step */ }
+    const { taskId } = await runwayCreateAvatarVideo({ avatarId: resolvedAvatarId, text });
     // Try a short inline poll inside Edge budget (max ~12s). If task isn't done, return task_id for client-side poll.
     const done = await runwayPollTask(taskId, { maxMs: 12000, intervalMs: 2000 }).catch(() => null);
     if (done && done.output && done.output[0]) {
       return {
-        forModel: `Talking head for '${character}' rendered: ${done.output[0]}`,
-        forUI: { kind: 'video', url: done.output[0], label: label || `${character}: ${text.slice(0, 40)}` },
+        forModel: `Talking head rendered: ${done.output[0]} (avatar=${resolvedAvatarId})`,
+        forUI: { kind: 'video', url: done.output[0], label: label || `${character || 'avatar'}: ${text.slice(0, 40)}` },
       };
     }
     return {
-      forModel: `Talking head task started: taskId=${taskId} (still processing). Use poll_task to retrieve result later.`,
-      forUI: { kind: 'text', text: `Talking-head task pending for ${character}. taskId=${taskId}. Use poll_task tool to fetch the rendered MP4 once done (60-180s).`, label: label || `${character}: pending` },
+      forModel: `Talking head task started. taskId=${taskId} avatarId=${resolvedAvatarId} text="${text.slice(0,80)}". Call poll_task with task_id="${taskId}" in 30-90s to retrieve the MP4.`,
+      forUI: { kind: 'text', text: `Talking-head pending. task_id=${taskId}. Use poll_task tool with task_id to fetch the MP4 (60-180s).`, label: label || `${character || 'avatar'}: pending` },
     };
   }
   if (name === 'poll_task') {
