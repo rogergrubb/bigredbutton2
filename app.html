@@ -243,10 +243,13 @@
     <aside class="side">
       <section class="card mini-me-card">
         <h3>Meet Mini-Me</h3>
-        <video src="/avatar.mp4" controls playsinline preload="metadata" poster="/hero1.png"
+        <video id="minimeVideo" src="/avatar.mp4" controls playsinline preload="metadata" poster="/hero1.png"
                style="width:100%;border-radius:8px;display:block"></video>
         <p style="font-size:12.5px;color:var(--muted);margin:10px 0 0;line-height:1.5">
           I'm Mini-Me, my creator's clone. Press play to hear the founder origin story — why Roger built me to make things that make things.
+        <div id="minimeReplay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.6);align-items:center;justify-content:center;cursor:pointer;backdrop-filter:blur(2px);z-index:5">
+          <button type="button" style="background:linear-gradient(135deg,#ff6b35,#ff3b3b);color:white;border:none;border-radius:50px;padding:14px 28px;font-weight:800;font-size:14px;font-family:'IBM Plex Mono',monospace;cursor:pointer;box-shadow:0 8px 28px rgba(255,107,53,0.5);display:flex;align-items:center;gap:10px"><span style="font-size:20px">↻</span> REPLAY MINI-ME</button>
+        </div>
           <a href="#" id="introPlay" style="color:var(--ok);text-decoration:none">▶ Have Mini-Me say hi</a>
         </p>
       </section>
@@ -532,6 +535,19 @@ function setupGasGaugeControls(){
   if (useMyLink) useMyLink.onclick = (e) => { e.preventDefault(); showJudgeFallback(0); };
 }
 setTimeout(() => { renderGasGauge(); setupGasGaugeControls(); }, 100);
+// Mini-Me video replay overlay — show on ended, hide on play
+setTimeout(() => {
+  const vid = document.getElementById('minimeVideo');
+  const overlay = document.getElementById('minimeReplay');
+  if (!vid || !overlay) return;
+  // Make sure overlay's parent (the video card) is position:relative so absolute children land correctly
+  const parent = vid.parentElement;
+  if (parent && getComputedStyle(parent).position === 'static') parent.style.position = 'relative';
+  vid.addEventListener('ended', () => { overlay.style.display = 'flex'; });
+  vid.addEventListener('play', () => { overlay.style.display = 'none'; });
+  overlay.addEventListener('click', () => { overlay.style.display = 'none'; vid.currentTime = 0; vid.play().catch(()=>{}); });
+}, 250);
+
 
 // === URL param handoff from homepage: ?prompt=...&autofire=1 ===
 setTimeout(() => {
