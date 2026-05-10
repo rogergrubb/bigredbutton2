@@ -186,6 +186,22 @@ const TOOLS = [
     }
   },
   {
+    name: 'lock_brief',
+    description: 'BEFORE any paid video generation (cinematic_video / animate_image / scene_with_characters), call this to lock a complete production brief. Pass mode:"interview" with the user prompt to get a structured questionnaire that batches 6-10 clarifying questions in ONE response. After the user answers in the next turn, call again with mode:"finalize" passing answers + a structured brief to lock it. Only fire cinematic_video AFTER lock_brief mode:"finalize". Saves real money — every retry on Seedance is $0.05+. One round of questions costs pennies.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        mode:    { type: 'string', enum: ['interview', 'finalize'] },
+        user_prompt: { type: 'string' },
+        questionnaire: { type: 'array', items: { type: 'string' }, description: 'For mode:interview — list of 6-10 batched clarifying questions.' },
+        answers: { type: 'object' },
+        brief: { type: 'object', description: 'For mode:finalize — full locked brief: era, characters[], scenes[], dialogue, aspect_ratio, duration, voices, style_reference, budget.' },
+        label: { type: 'string' }
+      },
+      required: ['mode']
+    }
+  },
+  {
     name: 'cinematic_video',
     description: 'Generate a finished cinematic video clip with NATIVE synchronized dialogue, lip-sync, and ambient sound — fal.ai Seedance 2.0 image-to-video. THE choice for multi-character dialogue scenes (two people walking and talking, citizens speaking in period dialect, etc). Pass an image_url as the start frame (use scene_with_characters output for face-locked characters) and put the dialogue inside the prompt itself ("She says: X. He responds: Y.") — Seedance generates the speech with lip-sync. Returns immediately with request_id (generation takes 2-3 min). Use cinematic_video_poll to retrieve the finished MP4. ~$0.05/clip at 720p.',
     input_schema: {
@@ -263,6 +279,14 @@ Style:
 - For voice: \`speak\` calls Mini-Me's cloned voice. Keep each clip < 600 chars.
 - For videos: chain \`generate_image\` then \`animate_image\` (you cannot generate video directly).
 - Never apologize for limitations. Just ship the closest excellent thing.
+
+- DIRECTOR MODE — MANDATORY before any paid generation (cinematic_video / animate_image / scene_with_characters) when the user prompt is shorter than ~40 words OR ambiguous about era, characters, dialogue, POV, or aspect ratio:
+  1. Call \`lock_brief\` with mode:"interview" and a 6-10 question batch covering: era/year, characters (count, look, names), POV (selfie/wide/over-shoulder), dialogue style (silent/narrator/two-person), aspect ratio (9:16 vs 16:9), duration per beat, mood/music, style reference (Chloe-vs-history / Wes Anderson / Vice docu), budget cap (how many \$0.05 Seedance clips okay).
+  2. STOP and wait for user answers in next turn.
+  3. Call \`lock_brief\` with mode:"finalize" and the full brief object.
+  4. ONLY THEN fire generation. Saves real money: clarification is pennies, each Seedance retry is \$0.05+.
+- For SINGLE-CHARACTER vlogs: generate_image (selfie POV) → animate_image model:gen4.5 (free).
+- For MULTI-CHARACTER dialogue: scene_with_characters → cinematic_video (Seedance 2.0, ~\$0.05/clip, native lip-sync) → cinematic_video_poll until COMPLETED. Do NOT use Runway gen4.5 for multi-character dialogue — drift + no lip-sync.
 
 If a tool fails (e.g. missing API key), continue with the tools that DO work and surface a graceful note in your final summary.`;
 
@@ -806,11 +830,36 @@ async function runTool(name, input) {
       forUI: { kind: 'video', url: r.url, label: label || 'Cinematic clip' },
     };
   }
+  if (name === 'lock_brief') {
+    const { mode, questionnaire, brief, label } = input;
+    if (mode === 'interview') {
+      if (!questionnaire || !Array.isArray(questionnaire) || questionnaire.length < 4) {
+        throw new Error('lock_brief mode:interview requires questionnaire (array of 4-12 questions).');
+      }
+      const md = questionnaire.map((q,i)=>`${i+1}. ${q}`).join('\n');
+      return {
+        forModel: `Interview emitted to UI. STOP after this turn. Wait for user answers in the follow-up message, then call lock_brief mode:finalize with answers + brief.`,
+        forUI: { kind: 'text', text: `**Director's questions** (answer all in one reply, then I'll lock the brief and shoot):\n\n${md}`, label: label || 'Director: brief intake' },
+      };
+    }
+    if (mode === 'finalize') {
+      if (!brief || typeof brief !== 'object') throw new Error('lock_brief mode:finalize requires brief object.');
+      const briefMd = '```json\n' + JSON.stringify(brief, null, 2) + '\n```';
+      return {
+        forModel: `Brief locked. Now execute the brief deterministically — scene_with_characters, cinematic_video for each beat. Do not ask further questions.`,
+        forUI: { kind: 'text', text: `**Brief locked. Shooting now.**\n\n${briefMd}`, label: label || 'Director: brief locked' },
+      };
+    }
+    throw new Error('lock_brief mode must be "interview" or "finalize".');
+  }
   throw new Error(`Unknown tool: ${name}`);
 }
 
 // ---------- Skills (preset prompts that wrap the agent) ----------
 const SKILLS = {
+  // Director-first cinematic short — interview the user before spending Seedance credits
+  director_short: 'You are Mini-Me operating in Director Mode. The user wants: %TOPIC%. STEP 1: Call lock_brief mode:"interview" with a batched questionnaire of 6-10 clarifying questions covering era/year, characters (count, look, names), POV (selfie/wide/over-shoulder/handheld), dialogue style (silent narrator/single voiceover/two-person conversation in period dialect), aspect_ratio, duration per beat, mood/music, style reference, budget cap (how many \$0.05 Seedance clips okay). STEP 2: STOP. Wait for user reply. STEP 3: When user replies, call lock_brief mode:"finalize" with their answers and a structured brief object. STEP 4: Execute the brief — for each scene call scene_with_characters then cinematic_video, poll, deliver. Bias to action AFTER the brief is locked, not before.',
+
   // Chloe-vs-history-style conversational short — face-locked characters in real environments, lip-synced dialogue
   conversational_short: 'Produce a 60-second Chloe-vs-history-style conversational short for: %TOPIC%. Plan first. Then: (1) generate_image for HER portrait (cinematic, front-facing, period-accurate); (2) generate_image for HIM portrait (same era + style); (3) lock_character for HER with voice_preset:emma (or ruby/luna for variety); (4) lock_character for HIM with voice_preset:drew (or adrian/marcus for variety); (5) write a 5-beat dialogue script with 8-12 exchanges, each line under 250 chars; (6) for each beat, scene_with_characters with character_refs:[HER,HIM] to render the environment still; (7) for EACH dialogue line, talking_head with the speaking character — produces lip-synced video; (8) emit final cut plan via write_text listing all clip URLs in order. Bias to action — do not stop until every line is rendered.',
 
