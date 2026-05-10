@@ -266,6 +266,8 @@
         </div>
 
       <section class="card">
+        <h3>Pending renders</h3>
+        <div id="pendingRenders" class="gallery" style="margin-bottom:16px;max-height:200px;font-size:12px"></div>
         <h3>Artifact gallery</h3>
         <div id="gallery" class="gallery">
           <div class="empty">Anything Mini-Me ships will appear here.</div>
@@ -342,6 +344,78 @@ const sourcesEl = $("#sources");
 const followupCard = $("#followupCard");
 const followupEl = $("#followup");
 const galleryEl = $("#gallery");
+const pendingEl = $("#pendingRenders");
+const activeToolEl = $("#activeTool");
+const activeToolNameEl = $("#activeToolName");
+const activeToolElapsedEl = $("#activeToolElapsed");
+const PENDING_KEY = "brb_pending_renders_v1";
+let __activeToolStart = null;
+let __activeToolName = null;
+let __activeToolTicker = null;
+
+function loadPending(){ try { return JSON.parse(localStorage.getItem(PENDING_KEY) || "[]"); } catch(_){ return []; } }
+function savePending(items){ localStorage.setItem(PENDING_KEY, JSON.stringify(items.slice(0, 30))); }
+function addPending(item){
+  if (!item || !item.requestId) return;
+  const items = loadPending();
+  if (items.find(x => x.requestId === item.requestId)) return;
+  items.unshift({ requestId: item.requestId, label: item.label || "Cinematic clip", submittedAt: Date.now(), kind: "cinematic_video" });
+  savePending(items);
+  renderPending();
+}
+function removePending(rid){
+  const items = loadPending().filter(x => x.requestId !== rid);
+  savePending(items);
+  renderPending();
+}
+function fmtAgo(ts){
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return s + "s";
+  return Math.floor(s/60) + "m " + (s%60) + "s";
+}
+function renderPending(){
+  const items = loadPending();
+  if (!items.length) { pendingEl.innerHTML = '<div class="empty" style="font-size:11px">No renders in flight.</div>'; return; }
+  pendingEl.innerHTML = items.map((it, i) => {
+    const ago = fmtAgo(it.submittedAt);
+    return '<div class="artifact" data-rid="'+escapeHtml(it.requestId)+'" style="padding:6px 8px;cursor:pointer;border-left:2px solid #ff6b35;background:rgba(255,107,53,0.06);margin-bottom:4px"><div style="font-weight:600;font-size:11px;color:#ffb380">⏳ '+escapeHtml(it.label)+'</div><div style="font-size:10px;opacity:0.6;font-family:monospace">'+escapeHtml(it.requestId.slice(0,18))+'… · '+ago+'</div><div style="font-size:10px;color:#7cc4ff;margin-top:2px">click to fetch</div></div>';
+  }).join("");
+  $$(".artifact[data-rid]", pendingEl).forEach(el => el.addEventListener("click", () => fetchPending(el.dataset.rid)));
+}
+async function fetchPending(rid){
+  // Synthesize an EXEC: cinematic_video_poll call to retrieve the latest status
+  toast("Polling " + rid.slice(0,8) + "…");
+  const exec = "EXEC: " + JSON.stringify({tool:"cinematic_video_poll", input:{request_id: rid, label:"Pending fetch " + rid.slice(0,8)}});
+  await runAgent({ inlinePrompt: exec, isFollowup: false });
+  // After SSE done, if a video came in, the gallery + results captured it. Remove from pending only if completed.
+  // We re-check by scanning the most recent gallery item.
+  setTimeout(() => {
+    const gal = JSON.parse(localStorage.getItem("brb_gallery_v1") || "[]");
+    if (gal[0] && gal[0].kind === "video") removePending(rid);
+  }, 1500);
+}
+// Update pending elapsed times every 5s
+setInterval(() => { if (loadPending().length) renderPending(); }, 5000);
+// Render on load
+setTimeout(renderPending, 100);
+
+// Active-tool tracking
+function setActiveTool(name){
+  __activeToolName = name; __activeToolStart = Date.now();
+  activeToolEl.style.display = "block";
+  activeToolNameEl.textContent = "⚙️ Running: " + name;
+  activeToolElapsedEl.textContent = "(0s)";
+  if (__activeToolTicker) clearInterval(__activeToolTicker);
+  __activeToolTicker = setInterval(() => {
+    if (__activeToolStart) activeToolElapsedEl.textContent = "(" + Math.floor((Date.now()-__activeToolStart)/1000) + "s)";
+  }, 1000);
+}
+function clearActiveTool(){
+  if (__activeToolTicker) { clearInterval(__activeToolTicker); __activeToolTicker = null; }
+  __activeToolStart = null; __activeToolName = null;
+  activeToolEl.style.display = "none";
+}
+
 const toastEl = $("#toast");
 
 let history = [];
@@ -513,10 +587,16 @@ function pushSources(items){
 function handleEvent(event, payload){
   if (event === "start") { ev("muted", "[start] " + new Date().toLocaleTimeString()); return; }
   if (event === "thought") { ev("plan", payload.text || ""); return; }
-  if (event === "tool_call") { ev("tool", payload.name + " → " + truncate(JSON.stringify(payload.input), 220)); return; }
+  if (event === "tool_call") {
+    setActiveTool(payload.name);
+    ev("tool", payload.name + " → " + truncate(JSON.stringify(payload.input), 220));
+    return;
+  }
   if (event === "tool_result") {
     if (payload.kind === "plan") { pushPlan(payload.steps || []); ev("plan", "Plan: " + (payload.steps || []).join(" → ")); return; }
     if (payload.kind === "search") { pushSources(payload.results || []); ev("ok", payload.results.length + " sources"); return; }
+    // Capture pending Seedance renders so user can re-fetch later
+    if (payload.requestId) addPending({ requestId: payload.requestId, label: payload.label });
     const node = renderResultBox(payload);
     results.appendChild(node);
     node.scrollIntoView({behavior:"smooth", block:"nearest"});
@@ -542,6 +622,7 @@ function handleEvent(event, payload){
   }
   if (event === "error") { ev("err", payload.text || "unknown error"); return; }
   if (event === "done") {
+    clearActiveTool();
     ev("muted", "[done]");
     // Press-to-talk: deterministically release on stream close, regardless of runAgent promise state
     if (typeof __mode !== "undefined" && __mode === "firing") {
