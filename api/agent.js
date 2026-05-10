@@ -825,11 +825,11 @@ async function runTool(name, input) {
     if (done && done.output && done.output[0]) {
       return {
         forModel: `Talking head rendered: ${done.output[0]} (avatar=${resolvedAvatarId})`,
-        forUI: { kind: 'video', url: done.output[0], label: label || `${character || 'avatar'}: ${text.slice(0, 40)}` },
+        forUI: { kind: 'video', url: done.output[0], label: label || `${character || 'avatar'}: ${(text || 'audio').slice(0, 40)}` },
       };
     }
     return {
-      forModel: `Talking head task started. taskId=${taskId} avatarId=${resolvedAvatarId} text="${text.slice(0,80)}". Call poll_task with task_id="${taskId}" in 30-90s to retrieve the MP4.`,
+      forModel: `Talking head task started. taskId=${taskId} avatarId=${resolvedAvatarId} src="${(text || input.audio_url || "").slice(0,80)}". Call poll_task with task_id="${taskId}" in 30-90s to retrieve the MP4.`,
       forUI: { kind: 'text', text: `Talking-head pending. task_id=${taskId}. Use poll_task tool with task_id to fetch the MP4 (60-180s).`, label: label || `${character || 'avatar'}: pending` },
     };
   }
