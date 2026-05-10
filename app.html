@@ -437,6 +437,8 @@ function renderResultBox(payload){
   } else if (payload.kind === "search" && payload.results){
     const items = payload.results.slice(0,12).map((r,i) => '<div class="src"><a href="' + escapeHtml(r.url||"#") + '" target="_blank" rel="noopener">[' + (i+1) + '] ' + escapeHtml(r.title||r.url||"") + '</a>' + (r.snippet ? '<div class="snip">' + escapeHtml(r.snippet) + '</div>' : "") + '</div>').join("");
     inner = '<div class="sources">' + items + '</div>';
+  } else if (payload.kind === "html" && !payload.html) {
+    inner = '<div style="padding:14px;background:#1d1116;border:1px solid #3a1a1f;border-radius:8px;color:#ffb3ad">The agent described a page but didn\'t emit the HTML body. This is an occasional model glitch — press the button again to retry.</div>';
   } else {
     inner = '<pre>' + escapeHtml(JSON.stringify(payload, null, 2)) + '</pre>';
   }

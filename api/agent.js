@@ -344,12 +344,19 @@ async function runTool(name, input) {
     };
   }
   if (name === 'write_html') {
+    // Validate: Claude occasionally calls this tool with only label and no html body.
+    if (!input.html || typeof input.html !== 'string' || input.html.length < 80) {
+      throw new Error('write_html called without an html body — return again with the full HTML document in the html field, starting with <!doctype html>.');
+    }
     return {
       forModel: 'HTML page emitted to UI.',
       forUI: { kind: 'html', html: input.html, label: input.label || 'Page' },
     };
   }
   if (name === 'write_text') {
+    if (!input.text || typeof input.text !== 'string' || input.text.length < 10) {
+      throw new Error('write_text called without a text body — return again with the actual text in the text field.');
+    }
     return {
       forModel: 'Text deliverable emitted to UI.',
       forUI: { kind: 'text', text: input.text, label: input.label || 'Output' },
