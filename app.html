@@ -533,6 +533,24 @@ function setupGasGaugeControls(){
 }
 setTimeout(() => { renderGasGauge(); setupGasGaugeControls(); }, 100);
 
+// === URL param handoff from homepage: ?prompt=...&autofire=1 ===
+setTimeout(() => {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const incoming = params.get('prompt');
+    const auto = params.get('autofire');
+    if (incoming && promptEl) {
+      promptEl.value = incoming;
+      promptEl.focus();
+      if (auto === '1') {
+        // Wait a beat so the user sees the prompt loaded, then fire
+        setTimeout(() => { runAgent({}); }, 800);
+      }
+    }
+  } catch (e) { console.warn('URL handoff err', e); }
+}, 250);
+
+
 // Active-tool tracking
 function setActiveTool(name){
   __activeToolName = name; __activeToolStart = Date.now();

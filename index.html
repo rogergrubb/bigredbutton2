@@ -54,6 +54,36 @@
   .cta:hover { background: #ff7373; text-decoration: none; }
   .cta.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
   .cta.ghost:hover { background: var(--panel); }
+  .cta.ghost:hover { background: var(--panel); }
+
+  /* Hero film-first reveal */
+  .film-hero { position: relative; padding: 24px 0 36px; text-align: center; }
+  .film-frame { position: relative; max-width: 720px; margin: 0 auto 18px; border-radius: 16px; overflow: hidden; box-shadow: 0 30px 80px -20px rgba(0,0,0,0.85); background:#000; }
+  .film-frame video { display:block; width:100%; height:auto; }
+  .film-overlay { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; opacity:0; transition: opacity .3s; background: rgba(0,0,0,0.35); }
+  .film-overlay.show { opacity:1; pointer-events:auto; cursor:pointer; }
+  .film-overlay-btn { background:var(--red); color:#fff; padding:14px 28px; border-radius:50px; font-weight:800; font-size:15px; box-shadow: 0 12px 40px rgba(255,89,89,0.55); animation: pulse 1.6s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+
+  /* BRB Press-It-Now reveal section */
+  .pressnow { padding: 44px 0; text-align:center; opacity:0; max-height:0; overflow:hidden; transition: opacity 1s ease, max-height 1.2s ease; }
+  .pressnow.revealed { opacity:1; max-height:1200px; }
+  .pressnow .pressnow-inner { max-width:720px; margin:0 auto; padding: 30px 28px; background: linear-gradient(180deg, #14171f 0%, #0a0c12 100%); border:2px solid var(--red); border-radius:18px; box-shadow: 0 30px 80px -20px rgba(255,89,89,0.4); }
+  .pressnow h2 { font-size: clamp(28px, 4vw, 42px); font-weight:900; letter-spacing:-1px; margin-bottom:14px; color:var(--text); }
+  .pressnow h2 .red { color:var(--red); }
+  .pressnow .sub { color:var(--dim); margin-bottom:22px; font-size:15px; }
+  .pressnow textarea { width:100%; padding:16px; background:#0a0c12; border:1px solid var(--border); color:var(--text); border-radius:10px; font-family:'SF Mono',Monaco,monospace; font-size:14px; line-height:1.55; min-height:96px; resize:vertical; margin-bottom:16px; }
+  .pressnow textarea:focus { border-color: var(--red); outline:none; }
+  .pressnow-row { display:flex; gap:12px; align-items:stretch; flex-wrap:wrap; justify-content:center; }
+  .pressnow .enter-btn { background: var(--red); color:#fff; padding:18px 38px; font-weight:900; font-size:18px; border:none; border-radius:12px; cursor:pointer; letter-spacing:.04em; box-shadow: 0 10px 32px rgba(255,89,89,0.45); transition: transform .12s, box-shadow .2s; }
+  .pressnow .enter-btn:hover { transform: scale(1.04); box-shadow: 0 16px 48px rgba(255,89,89,0.65); }
+  .pressnow .voice-hint { color: var(--amber); font-size:13px; margin-top:14px; font-family:'SF Mono',monospace; }
+  .pressnow .voice-hint .hot { color: var(--red); }
+
+  .skip-bar { text-align:center; padding-top: 12px; }
+  .skip-bar a { font-size:12px; color: var(--dim); text-decoration:underline; }
+  .skip-bar a:hover { color: var(--text); }
+
 
   .arrow-bar { display: flex; gap: 12px; justify-content: center; align-items: center; margin: 56px auto 12px; flex-wrap: wrap; max-width: 940px; font-family: var(--mono); font-size: 14px; color: var(--dim); letter-spacing: .08em; text-transform: uppercase; }
   .arrow-bar .step { background: var(--panel); border: 1px solid var(--border); padding: 10px 16px; border-radius: 8px; }
@@ -123,25 +153,32 @@
 
 <main>
 
-<section class="hero">
+<section class="film-hero">
   <div class="title-mark">▣ <span class="brand-strong">THE <span class="red">BIG RED</span> BUTTON</span></div>
-  <h1>Autonomous <span class="accent">momentum capture</span><br>for solo founders.</h1>
-  <p class="sub"><strong>When something starts working, press the button.</strong><br>The agent turns the signal into a launch system.</p>
-  <p class="pithy">Vibe coders. Solopreneurs. Entrepreneurs. See the signal — let Runway rise to the challenge.</p>
+  <h1 style="font-size:clamp(32px,5vw,56px);font-weight:900;line-height:1;margin:8px 0 22px">A solo founder. <span class="red">One button.</span></h1>
 
-  <div>
-    <a class="cta" href="/app">▶ Press the button</a>
-    <a class="cta ghost" href="/showcase">See the live demo</a>
+  <div class="film-frame">
+    <video id="heroFilm" src="/film_v19.mp4" muted playsinline preload="auto" autoplay></video>
+    <div id="filmUnmute" class="film-overlay show" onclick="document.getElementById('heroFilm').muted=false; this.classList.remove('show');">
+      <div class="film-overlay-btn">▶ Tap to unmute</div>
+    </div>
   </div>
 
-  <div class="arrow-bar">
-    <span class="step">SIGNAL</span>
-    <span class="arrow">→</span>
-    <span class="step">STRATEGY</span>
-    <span class="arrow">→</span>
-    <span class="step">MEDIA</span>
-    <span class="arrow">→</span>
-    <span class="step hot">LAUNCH</span>
+  <div class="skip-bar"><a href="#pressnow" id="skipFilm">Skip the film — go straight to the button →</a></div>
+</section>
+
+<section id="pressnow" class="pressnow">
+  <div class="pressnow-inner">
+    <h2>Now <span class="red">press the button.</span></h2>
+    <p class="sub">A prompt is loaded for you. Hit ENTER and watch the agent ship a finished cinematic video in under three minutes — characters, dialogue, lip-sync, all of it. Or rewrite the prompt with anything you can imagine.</p>
+
+    <textarea id="prefillPrompt" rows="4">A hip tattooed barista in her late twenties leaning on the chrome counter of a neon-lit Tokyo alley coffee bar at midnight. She pulls an espresso shot while talking dryly to camera in a husky voice: "Look. I don't make latte art anymore. The art is for tourists. You came here for the bitter truth — that's the only thing I'm pouring tonight." Selfie POV vlog, 10 seconds, cinematic.</textarea>
+
+    <div class="pressnow-row">
+      <a id="enterBtn" class="enter-btn" href="/app">⏎ ENTER — ship the video</a>
+    </div>
+
+    <div class="voice-hint">or use voice — once on the next page, <span class="hot">PRESS THE RED BUTTON and speak.</span></div>
   </div>
 </section>
 
@@ -167,12 +204,7 @@
   </div>
 </section>
 
-<section style="padding:48px 0 32px;">
-  <div style="max-width:1080px;margin:0 auto;background:#1a1e28;border:1px solid #2a3140;border-radius:14px;padding:14px;box-shadow:0 25px 60px -25px rgba(0,0,0,0.7)">
-    <video src="/film_v19.mp4" controls playsinline poster="/hero1.png" style="width:100%;height:auto;display:block;border-radius:8px;background:#000"></video>
-    <div style="text-align:center;color:#8b91a3;font-size:13px;margin-top:14px;font-family:'SF Mono',Monaco,monospace;letter-spacing:.05em;">▮ HACKATHON SUBMISSION FILM · 1:30 · ALL VISUALS RUNWAY-GENERATED · NARRATION IN CLONED VOICE</div>
-  </div>
-</section>
+
 
 <section class="block">
   <h3>The signal that triggered this submission</h3>
@@ -281,5 +313,43 @@
   </div>
 </footer>
 
+<script>
+(function(){
+  const film = document.getElementById('heroFilm');
+  const press = document.getElementById('pressnow');
+  const enterBtn = document.getElementById('enterBtn');
+  const promptEl = document.getElementById('prefillPrompt');
+  function reveal(){
+    if (press.classList.contains('revealed')) return;
+    press.classList.add('revealed');
+    setTimeout(() => press.scrollIntoView({behavior:'smooth', block:'start'}), 400);
+  }
+  if (film) {
+    film.addEventListener('ended', reveal);
+    // Reveal after 45s in case the user lets it play long
+    setTimeout(reveal, 45000);
+    // Try to play (autoplay-with-muted should work in most browsers)
+    film.play().catch(() => {});
+  }
+  // Skip-to-button link
+  const skip = document.getElementById('skipFilm');
+  if (skip) skip.addEventListener('click', (e) => { e.preventDefault(); reveal(); });
+  // Enter button — pass prompt to /app via URL param
+  if (enterBtn && promptEl) {
+    enterBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const p = promptEl.value.trim();
+      if (!p) { promptEl.focus(); return; }
+      window.location.href = '/app?prompt=' + encodeURIComponent(p) + '&autofire=1';
+    });
+  }
+  // Cmd/Ctrl+Enter from textarea also fires
+  if (promptEl) {
+    promptEl.addEventListener('keydown', (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); enterBtn.click(); }
+    });
+  }
+})();
+</script>
 </body>
 </html>
