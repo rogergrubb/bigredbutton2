@@ -15,7 +15,7 @@
 //   ELEVENLABS_VOICE_ID      (default: Roger's clone)
 //   ANTHROPIC_MODEL          (default: claude-sonnet-4-5)
 
-export const config = { runtime: 'edge' };
+export const config = { runtime: 'nodejs', maxDuration: 300 };
 
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 const DEFAULT_VOICE   = process.env.ELEVENLABS_VOICE_ID || 'NfHkocJCWwrSqAxfTcxk';
