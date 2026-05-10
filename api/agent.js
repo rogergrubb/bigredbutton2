@@ -186,6 +186,34 @@ const TOOLS = [
     }
   },
   {
+    name: 'cinematic_video',
+    description: 'Generate a finished cinematic video clip with NATIVE synchronized dialogue, lip-sync, and ambient sound — fal.ai Seedance 2.0 image-to-video. THE choice for multi-character dialogue scenes (two people walking and talking, citizens speaking in period dialect, etc). Pass an image_url as the start frame (use scene_with_characters output for face-locked characters) and put the dialogue inside the prompt itself ("She says: X. He responds: Y.") — Seedance generates the speech with lip-sync. Returns immediately with request_id (generation takes 2-3 min). Use cinematic_video_poll to retrieve the finished MP4. ~$0.05/clip at 720p.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        image_url: { type: 'string' },
+        prompt:    { type: 'string' },
+        duration:  { type: 'string', default: '10' },
+        resolution:{ type: 'string', default: '720p' },
+        aspect_ratio:{ type: 'string', default: '9:16' },
+        label:     { type: 'string' }
+      },
+      required: ['image_url', 'prompt']
+    }
+  },
+  {
+    name: 'cinematic_video_poll',
+    description: 'Poll a Seedance 2.0 task by request_id. Returns finished MP4 URL when COMPLETED. Generation takes 2-3 min — call this 90-180s after cinematic_video.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        request_id: { type: 'string' },
+        label: { type: 'string' }
+      },
+      required: ['request_id']
+    }
+  },
+  {
     name: 'poll_task',
     description: 'Poll a Runway async task by id and return its output URL when SUCCEEDED. Used to retrieve the result of a talking_head call that returned only a task id (avatar videos take 60-180s).',
     input_schema: {
@@ -412,6 +440,44 @@ async function toolReadUrl({ url, max_chars = 12000 }) {
 
 
 // ---------- Tool dispatcher ----------
+
+
+// ---------- fal.ai Seedance 2.0 (multi-character native-dialogue video) ----------
+
+async function falSeedanceImageToVideo({ prompt, image_url, duration = '10', resolution = '720p', aspect_ratio = '9:16', generate_audio = true }) {
+  if (!process.env.FAL_KEY) {
+    const err = new Error('Missing FAL_KEY env var. Set it in Vercel project settings.');
+    err.code = 'MISSING_KEY'; err.key = 'FAL_KEY';
+    throw err;
+  }
+  const r = await fetch('https://queue.fal.run/bytedance/seedance-2.0/image-to-video', {
+    method: 'POST',
+    headers: { 'Authorization': `Key ${process.env.FAL_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, image_url, duration: String(duration), resolution, aspect_ratio, generate_audio }),
+  });
+  if (!r.ok) {
+    const txt = await r.text();
+    throw new Error(`fal.ai Seedance POST ${r.status}: ${txt.slice(0, 600)}`);
+  }
+  const j = await r.json();
+  return { requestId: j.request_id, statusUrl: j.status_url, responseUrl: j.response_url };
+}
+
+async function falPollSeedance({ request_id }) {
+  if (!process.env.FAL_KEY) throw new Error('Missing FAL_KEY env var.');
+  const statusUrl = `https://queue.fal.run/bytedance/seedance-2.0/requests/${request_id}/status`;
+  const sr = await fetch(statusUrl, { headers: { 'Authorization': `Key ${process.env.FAL_KEY}` } });
+  if (!sr.ok) throw new Error(`fal.ai status ${sr.status}: ${await sr.text()}`);
+  const sj = await sr.json();
+  if (sj.status !== 'COMPLETED') return { status: sj.status, queue_position: sj.queue_position };
+  const responseUrl = `https://queue.fal.run/bytedance/seedance-2.0/requests/${request_id}`;
+  const rr = await fetch(responseUrl, { headers: { 'Authorization': `Key ${process.env.FAL_KEY}` } });
+  if (!rr.ok) throw new Error(`fal.ai result ${rr.status}: ${await rr.text()}`);
+  const rj = await rr.json();
+  const url = rj.video && rj.video.url;
+  if (!url) throw new Error('Seedance COMPLETED but no video URL');
+  return { status: 'COMPLETED', url, contentType: rj.video?.content_type, fileSize: rj.video?.file_size };
+}
 
 // ---------- Runway character + avatar pipeline ----------
 
@@ -714,6 +780,30 @@ async function runTool(name, input) {
     return {
       forModel: `Task ${task_id} ${j.status} (still processing). Try poll_task again in 30-60s.`,
       forUI: { kind: 'text', text: `Status: ${j.status}. Try again in 30-60s.`, label: label || `Task ${task_id.slice(0,8)} ${j.status}`, status: j.status },
+    };
+  }
+  if (name === 'cinematic_video') {
+    const { image_url, prompt, duration, resolution, aspect_ratio, label } = input;
+    if (!image_url || !prompt) throw new Error('cinematic_video requires image_url and prompt.');
+    const r = await falSeedanceImageToVideo({ image_url, prompt, duration, resolution, aspect_ratio });
+    return {
+      forModel: `Seedance 2.0 task started. request_id="${r.requestId}". 2-3 min to render. Call cinematic_video_poll with request_id="${r.requestId}".`,
+      forUI: { kind: 'text', text: `Cinematic video pending. request_id=${r.requestId}. Use cinematic_video_poll (2-3 min).`, label: label || 'Cinematic clip pending', requestId: r.requestId },
+    };
+  }
+  if (name === 'cinematic_video_poll') {
+    const { request_id, label } = input;
+    if (!request_id) throw new Error('cinematic_video_poll requires request_id.');
+    const r = await falPollSeedance({ request_id });
+    if (r.status !== 'COMPLETED') {
+      return {
+        forModel: `Seedance task ${request_id} status=${r.status}. Call again in 30-60s.`,
+        forUI: { kind: 'text', text: `Status: ${r.status}. Try again in 30-60s.`, label: label || `Seedance ${r.status}`, status: r.status },
+      };
+    }
+    return {
+      forModel: `Seedance task ${request_id} COMPLETED: ${r.url}`,
+      forUI: { kind: 'video', url: r.url, label: label || 'Cinematic clip' },
     };
   }
   throw new Error(`Unknown tool: ${name}`);
