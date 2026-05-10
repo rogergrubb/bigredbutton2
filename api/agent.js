@@ -507,7 +507,7 @@ async function falSeedanceImageToVideo({ prompt, image_url, duration = '10', res
   if (!r.ok) {
     const txt = await r.text();
     if (r.status === 403 && txt.includes('Exhausted balance')) {
-      const err = new Error('fal.ai balance exhausted — top up at fal.ai/dashboard/billing or click 'use my key' in the BRB UI to add your own key.');
+      const err = new Error(`fal.ai balance exhausted — top up at fal.ai/dashboard/billing or click "use my key" in the BRB UI to add your own key.`);
       err.code = 'FAL_EXHAUSTED'; err.userFacing = true;
       throw err;
     }
@@ -532,7 +532,7 @@ async function falSeedanceTextToVideo({ prompt, duration = '10', resolution = '7
   if (!r.ok) {
     const txt = await r.text();
     if (r.status === 403 && txt.includes('Exhausted balance')) {
-      const err = new Error('fal.ai balance exhausted — top up at fal.ai/dashboard/billing or click 'use my key' in the BRB UI to add your own key.');
+      const err = new Error(`fal.ai balance exhausted — top up at fal.ai/dashboard/billing or click "use my key" in the BRB UI to add your own key.`);
       err.code = 'FAL_EXHAUSTED'; err.userFacing = true;
       throw err;
     }
