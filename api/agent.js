@@ -506,7 +506,12 @@ async function falSeedanceImageToVideo({ prompt, image_url, duration = '10', res
   });
   if (!r.ok) {
     const txt = await r.text();
-    throw new Error(`fal.ai Seedance POST ${r.status}: ${txt.slice(0, 600)}`);
+    if (r.status === 403 && txt.includes('Exhausted balance')) {
+      const err = new Error('fal.ai balance exhausted — Roger\'s starter credits are spent. Use the "use my key" link in the BRB UI to add your own fal.ai key, or top up at fal.ai/dashboard/billing.');
+      err.code = 'FAL_EXHAUSTED'; err.userFacing = true;
+      throw err;
+    }
+    throw new Error(`fal.ai Seedance POST ${r.status}: ${txt.slice(0, 400)}`);
   }
   const j = await r.json();
   return { requestId: j.request_id, statusUrl: j.status_url, responseUrl: j.response_url };
@@ -526,7 +531,12 @@ async function falSeedanceTextToVideo({ prompt, duration = '10', resolution = '7
   });
   if (!r.ok) {
     const txt = await r.text();
-    throw new Error(`fal.ai Seedance T2V POST ${r.status}: ${txt.slice(0, 600)}`);
+    if (r.status === 403 && txt.includes('Exhausted balance')) {
+      const err = new Error('fal.ai balance exhausted — Roger\'s starter credits are spent. Use the "use my key" link in the BRB UI to add your own fal.ai key, or top up at fal.ai/dashboard/billing.');
+      err.code = 'FAL_EXHAUSTED'; err.userFacing = true;
+      throw err;
+    }
+    throw new Error(`fal.ai Seedance T2V POST ${r.status}: ${txt.slice(0, 400)}`);
   }
   const j = await r.json();
   return { requestId: j.request_id };
@@ -825,17 +835,20 @@ async function runTool(name, input) {
   if (name === 'poll_task') {
     const { task_id, label } = input;
     if (!task_id) throw new Error('poll_task requires task_id.');
+    if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(task_id)) {
+      throw new Error(`poll_task: invalid task_id format (expected UUID, got "${task_id.slice(0, 40)}")`);
+    }
     requireKey('RUNWAY_API_KEY');
-    // Single status check — return current state immediately, don't loop
     const r = await fetch(`https://api.dev.runwayml.com/v1/tasks/${task_id}`, {
       headers: {
         'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
         'X-Runway-Version': RUNWAY_VERSION,
       },
     });
+    if (r.status === 404) throw new Error(`poll_task: task not found (id=${task_id.slice(0, 8)}...)`);
     if (!r.ok) {
       const txt = await r.text();
-      throw new Error(`poll_task: Runway ${r.status}: ${txt.slice(0, 400)}`);
+      throw new Error(`poll_task: Runway ${r.status}: ${txt.slice(0, 200)}`);
     }
     const j = await r.json();
     if (j.status === 'SUCCEEDED') {
@@ -897,10 +910,15 @@ async function runTool(name, input) {
   if (name === 'cinematic_video_poll') {
     const { request_id, label } = input;
     if (!request_id) throw new Error('cinematic_video_poll requires request_id.');
-    // Sleep 12s before checking — Seedance renders take 2-3 min so a 1s poll loop is wasteful.
-    // This consumes useful time per poll and avoids 7-8 rapid-fire status pings.
+    if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(request_id)) {
+      throw new Error(`cinematic_video_poll: invalid request_id format (expected UUID)`);
+    }
     await new Promise(res => setTimeout(res, 12000));
-    const r = await falPollSeedance({ request_id });
+    const r = await falPollSeedance({ request_id }).catch(e => {
+      const msg = String(e.message || e);
+      if (msg.includes('405') || msg.includes('404')) throw new Error(`cinematic_video_poll: task not found (id=${request_id.slice(0, 8)}...)`);
+      throw e;
+    });
     if (r.status !== 'COMPLETED') {
       return {
         forModel: `Seedance task ${request_id} status=${r.status} after 12s wait. DO NOT poll again in this turn. Tell the user the UI's Pending Renders panel will let them fetch when ready, then end the turn.`,
