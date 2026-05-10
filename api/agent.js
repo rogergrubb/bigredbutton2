@@ -174,16 +174,16 @@ const TOOLS = [
   },
   {
     name: 'talking_head',
-    description: 'Render a lip-synced talking-head video of a registered character speaking a line. Use either character (lookup in current session) OR avatar_id (explicit Runway avatar id from a prior lock_character call) — the avatar_id form is REQUIRED across multiple agent turns since SESSION is not persisted between requests. Returns finished MP4 if it lands within the Edge budget, otherwise a task_id to poll.',
+    description: 'Render a lip-synced talking-head video of a registered character speaking. Pass avatar_id (Runway avatar id) + either text (Runway TTS using avatar voice preset) OR audio_url (HTTPS URL to existing audio file — overrides text). Returns task_id to poll.',
     input_schema: {
       type: 'object',
       properties: {
         character: { type: 'string', description: 'Character name registered via lock_character (this turn only).' },
-        avatar_id: { type: 'string', description: 'Explicit Runway avatar id from a prior lock_character tool_result. Use this when continuing across turns.' },
-        text:      { type: 'string', description: 'Line of dialogue (under ~250 chars).' },
+        avatar_id: { type: 'string', description: 'Explicit Runway avatar id (preferred for cross-turn use).' },
+        text:      { type: 'string', description: 'Dialogue text — used when audio_url is not provided.' },
+        audio_url: { type: 'string', description: 'HTTPS URL to a pre-recorded audio file (e.g. ElevenLabs custom voice clone output staged on public host). Bypasses Runway TTS entirely.' },
         label:     { type: 'string' }
-      },
-      required: ['text']
+      }
     }
   },
   {
@@ -818,7 +818,8 @@ async function runTool(name, input) {
     }
     if (!resolvedAvatarId) throw new Error(`talking_head requires either avatar_id (preferred) or character (in-session). Provide avatar_id from a prior lock_character tool_result.`);
     try { await runwayWaitAvatarReady(resolvedAvatarId, { maxMs: 8000 }); } catch (e) { /* surface in next step */ }
-    const { taskId } = await runwayCreateAvatarVideo({ avatarId: resolvedAvatarId, text });
+    const audio_url = input.audio_url;
+    const { taskId } = await runwayCreateAvatarVideo({ avatarId: resolvedAvatarId, audioUrl: audio_url, text });
     // Try a short inline poll inside Edge budget (max ~12s). If task isn't done, return task_id for client-side poll.
     const done = await runwayPollTask(taskId, { maxMs: 12000, intervalMs: 2000 }).catch(() => null);
     if (done && done.output && done.output[0]) {
