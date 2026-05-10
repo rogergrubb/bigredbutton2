@@ -535,7 +535,17 @@ function handleEvent(event, payload){
     return;
   }
   if (event === "error") { ev("err", payload.text || "unknown error"); return; }
-  if (event === "done") { ev("muted", "[done]"); return; }
+  if (event === "done") {
+    ev("muted", "[done]");
+    // Press-to-talk: deterministically release on stream close, regardless of runAgent promise state
+    if (typeof __mode !== "undefined" && __mode === "firing") {
+      __mode = "idle";
+      goBtn.textContent = "PRESS THE BUTTON";
+      goBtn.classList.remove("listening","firing");
+      hint.textContent = "Click to talk. Or type and press Cmd/Ctrl+Enter.";
+    }
+    return;
+  }
 }
 
 async function runAgent(opts){
@@ -608,7 +618,8 @@ function __setBtn(text, cls) {
   if (cls) goBtn.classList.add(cls);
 }
 
-function __startListening() {
+function __startListening(opts) {
+  opts = opts || {};
   if (!SR) {
     toast("Voice not supported in this browser. Type your prompt and click again.");
     promptEl.focus();
@@ -621,8 +632,10 @@ function __startListening() {
   __mode = "listening";
   __setBtn("LISTENING", "listening");
   hint.textContent = "Speak your outcome. I'll fire when you pause.";
-  promptEl.value = "";
-  promptEl.dataset.finalTranscript = "";
+  // Preserve any text the user already typed; voice transcript appends after a space
+  const existing = (opts.preserveExisting && promptEl.value && promptEl.value.trim()) ? promptEl.value.trim() + " " : "";
+  promptEl.value = existing;
+  promptEl.dataset.finalTranscript = existing;
 
   try {
     __recognition = new SR();
@@ -687,10 +700,22 @@ function __stopAndFire() {
   __setBtn("WORKING…", "firing");
   hint.textContent = "Mini-Me is on it.";
   promptEl.dataset.finalTranscript = "";
+  // Safety net: 120s hard timeout to unstick the button if anything hangs
+  const __safetyTimer = setTimeout(() => {
+    if (__mode === "firing") {
+      __mode = "idle";
+      __setBtn("PRESS THE BUTTON");
+      hint.textContent = "Timeout — try again.";
+      toast("Agent timed out. Try again.");
+    }
+  }, 120000);
   Promise.resolve(runAgent({})).finally(() => {
-    __mode = "idle";
-    __setBtn("PRESS THE BUTTON");
-    hint.textContent = "Click to talk. Or type and press Cmd/Ctrl+Enter.";
+    clearTimeout(__safetyTimer);
+    if (__mode === "firing") {
+      __mode = "idle";
+      __setBtn("PRESS THE BUTTON");
+      hint.textContent = "Click to talk. Or type and press Cmd/Ctrl+Enter.";
+    }
   });
 }
 
@@ -699,9 +724,9 @@ goBtn.addEventListener("click", (e) => {
   if (e.metaKey || e.ctrlKey) { runAgent({}); return; }
   if (__mode === "listening") { __stopAndFire(); return; }
   if (__mode === "firing") return;
-  // idle: ALWAYS open the mic. The button is press-to-talk.
-  // To fire typed text without the mic: Cmd/Ctrl+click the button, or Cmd/Ctrl+Enter in the textarea.
-  __startListening();
+  // idle: open the mic (press-to-talk). If the textarea already has typed content,
+  // append the voice transcript to it instead of overwriting.
+  __startListening({ preserveExisting: true });
 });
 
 // Set initial hint
