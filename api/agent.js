@@ -187,6 +187,11 @@ const TOOLS = [
     }
   },
   {
+    name: 'list_avatars',
+    description: 'List all Runway avatars on the account. Returns an array of {id, name, status, referenceImageUri, voicePresetId}. Use to find an existing avatar id (e.g., Mini-Me/AI-Roger) without creating a new one.',
+    input_schema: { type: 'object', properties: { label: { type: 'string' } } }
+  },
+  {
     name: 'lock_brief',
     description: 'BEFORE any paid video generation (cinematic_video / animate_image / scene_with_characters), call this to lock a complete production brief. Pass mode:"interview" with the user prompt to get a structured questionnaire that batches 6-10 clarifying questions in ONE response. After the user answers in the next turn, call again with mode:"finalize" passing answers + a structured brief to lock it. Only fire cinematic_video AFTER lock_brief mode:"finalize". Saves real money — every retry on Seedance is $0.05+. One round of questions costs pennies.',
     input_schema: {
@@ -928,6 +933,24 @@ async function runTool(name, input) {
       };
     }
     throw new Error('lock_brief mode must be "interview" or "finalize".');
+  }
+  if (name === 'list_avatars') {
+    requireKey('RUNWAY_API_KEY');
+    const r = await fetch('https://api.dev.runwayml.com/v1/avatars?limit=50', {
+      headers: { 'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`, 'X-Runway-Version': RUNWAY_VERSION },
+    });
+    if (!r.ok) throw new Error(`Runway list_avatars ${r.status}: ${await r.text()}`);
+    const j = await r.json();
+    const items = (j.data || j.avatars || []).map(a => ({
+      id: a.id, name: a.name, status: a.status,
+      referenceImageUri: a.referenceImageUri || null,
+      voice: a.voice && (a.voice.presetId || a.voice.id) || null,
+    }));
+    const summary = items.map(it => `- ${it.name} | id=${it.id} | status=${it.status} | voice=${it.voice}`).join('\n');
+    return {
+      forModel: `Found ${items.length} avatars:\n${summary}`,
+      forUI: { kind: 'text', text: summary || 'No avatars found.', label: 'Runway avatars', avatars: items },
+    };
   }
   throw new Error(`Unknown tool: ${name}`);
 }
