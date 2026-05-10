@@ -682,13 +682,38 @@ async function runTool(name, input) {
   if (name === 'poll_task') {
     const { task_id, label } = input;
     if (!task_id) throw new Error('poll_task requires task_id.');
-    const done = await runwayPollTask(task_id, { maxMs: 14000, intervalMs: 2000 }).catch(e => { throw e; });
-    const url = done && done.output && done.output[0];
-    if (!url) throw new Error(`poll_task: task ${task_id} has no output yet (status: ${done?.status||'?'}). Try again in a few seconds.`);
-    const isVideo = /\.mp4(\?|$)/i.test(url);
+    requireKey('RUNWAY_API_KEY');
+    // Single status check — return current state immediately, don't loop
+    const r = await fetch(`https://api.dev.runwayml.com/v1/tasks/${task_id}`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
+        'X-Runway-Version': RUNWAY_VERSION,
+      },
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error(`poll_task: Runway ${r.status}: ${txt.slice(0, 400)}`);
+    }
+    const j = await r.json();
+    if (j.status === 'SUCCEEDED') {
+      const url = j.output && j.output[0];
+      if (!url) throw new Error(`poll_task: SUCCEEDED but no output URL`);
+      const isVideo = /\.mp4(\?|$)/i.test(url);
+      return {
+        forModel: `Task ${task_id} SUCCEEDED: ${url}`,
+        forUI: { kind: isVideo ? 'video' : 'image', url, label: label || `Task ${task_id.slice(0, 8)}` },
+      };
+    }
+    if (j.status === 'FAILED' || j.status === 'CANCELED') {
+      const reason = j.failure || j.failureCode || j.failureReason || 'no reason given';
+      return {
+        forModel: `Task ${task_id} ${j.status}: ${reason}`,
+        forUI: { kind: 'text', text: `Task ${j.status}: ${reason}`, label: label || `Task ${task_id.slice(0,8)} ${j.status}`, status: j.status, reason },
+      };
+    }
     return {
-      forModel: `Task ${task_id} resolved: ${url}`,
-      forUI: { kind: isVideo ? 'video' : 'image', url, label: label || `Task ${task_id.slice(0, 8)}` },
+      forModel: `Task ${task_id} ${j.status} (still processing). Try poll_task again in 30-60s.`,
+      forUI: { kind: 'text', text: `Status: ${j.status}. Try again in 30-60s.`, label: label || `Task ${task_id.slice(0,8)} ${j.status}`, status: j.status },
     };
   }
   throw new Error(`Unknown tool: ${name}`);
