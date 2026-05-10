@@ -624,8 +624,8 @@ async function runTool(name, input) {
     return {
       forModel: `LOCKED character='${charName}' avatarId='${avatarId || 'null'}' voicePreset='${voicePreset}' portrait_url='${portrait_url}'. To use across future turns: pass avatar_id='${avatarId || 'null'}' to talking_head and pass reference_image_urls=['${portrait_url}'] to scene_with_characters. ${avatarErr ? 'Error: ' + avatarErr : ''}`,
       forUI: avatarErr
-        ? { kind: 'text', text: `Avatar create error for '${charName}':\n${avatarErr}\n\nPortrait stored — scene_with_characters will still work for face-locked stills.`, label: `Locked: ${charName} (debug)` }
-        : { kind: 'image', url: portrait_url, label: `Locked: ${charName} (voice: ${voicePreset})` },
+        ? { kind: 'text', text: `Avatar create error for '${charName}':\n${avatarErr}\n\nPortrait stored — scene_with_characters will still work for face-locked stills.`, label: `Locked: ${charName} (debug)`, avatarId: null, portrait_url, voicePreset }
+        : { kind: 'image', url: portrait_url, label: `Locked: ${charName} (voice: ${voicePreset}) avatarId=${avatarId}`, avatarId, portrait_url, voicePreset },
     };
   }
   if (name === 'cast_voice') {
