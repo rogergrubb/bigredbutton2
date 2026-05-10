@@ -122,12 +122,14 @@ const TOOLS = [
   // Anthropic server-side web search.
   {
     name: 'lock_character',
-    description: 'Register a persistent character (face-locked reference) from a portrait image so subsequent scene_with_characters / talking_head calls reuse the same face. Call this ONCE per character in a multi-scene shoot. Returns a character ref id stored in the conversation.',
+    description: 'Register a persistent character from a portrait image. Creates a Runway custom avatar (face-locked + voice-locked). Call this ONCE per character. Subsequent talking_head calls produce lip-synced video of this character speaking.',
     input_schema: {
       type: 'object',
       properties: {
-        portrait_url: { type: 'string', description: 'URL of a clean front-facing portrait of the character.' },
-        name:         { type: 'string', description: 'Short tag, e.g. HER, HIM, NARRATOR.' }
+        portrait_url: { type: 'string', description: 'HTTPS URL of a clean front-facing portrait.' },
+        name:         { type: 'string', description: 'Short tag, e.g. HER, HIM, NARRATOR.' },
+        voice_preset: { type: 'string', description: 'Runway voice preset id. Female options: emma, ruby, nina, luna, mia, summer, aurora, violet, georgia, petra, clara, skye, victoria, maya. Male options: adrian, drew, marcus, vincent, jasper, leo, max, blake, david, nathan, sam, adam, zach, roman, felix, morgan. Default: adrian.', default: 'adrian' },
+        personality:  { type: 'string', description: 'Optional system prompt describing how this character behaves in dialogue.' }
       },
       required: ['portrait_url', 'name']
     }
@@ -164,13 +166,12 @@ const TOOLS = [
   },
   {
     name: 'talking_head',
-    description: 'Render a lip-synced talking-head video of a registered character speaking a line. Pipeline: ElevenLabs TTS in the cast voice → Runway Avatar Videos (audio-driven gwm1_avatars) → MP4 URL. Use one talking_head call per spoken line in a conversation.',
+    description: 'Render a lip-synced talking-head video of a registered character speaking a line. Pipeline: Runway avatar_videos with speech.type:text using the avatar voice configured at lock_character time. Single call returns finished MP4. Use one talking_head call per spoken line.',
     input_schema: {
       type: 'object',
       properties: {
         character: { type: 'string', description: 'Character name registered via lock_character.' },
         text:      { type: 'string', description: 'Line of dialogue to be spoken (under ~250 chars per call).' },
-        voice_tag: { type: 'string', description: 'Optional voice cast tag (HER/HIM). If omitted, uses character name.' },
         label:     { type: 'string' }
       },
       required: ['character', 'text']
@@ -426,73 +427,83 @@ async function runwayTextToSpeech({ text, voice_id }) {
   throw new Error(`Runway text_to_speech failed. Last error: ${lastErr.slice(0, 400)}`);
 }
 
-async function runwayCreateAvatar({ portrait_url, name }) {
-  // POST /v1/avatars to register a persistent custom avatar.
-  // Schema is best-effort: Runway's docs list `referenceImage` for create-avatar.
-  // We try { referenceImage } first, fall back to { imageUri } if that 4xxs.
+async function runwayCreateAvatar({ portrait_url, name, voice_preset = 'adrian', personality }) {
+  // POST /v1/avatars — schema verified against @runwayml/sdk types.
+  // Required: name, personality (system prompt), referenceImage (HTTPS URL), voice.
   requireKey('RUNWAY_API_KEY');
-  const tryPayloads = [
-    { name, referenceImage: portrait_url },
-    { name, imageUri:       portrait_url },
-    { name, image:          portrait_url },
-  ];
-  let lastErr;
-  for (const payload of tryPayloads) {
-    const r = await fetch('https://api.dev.runwayml.com/v1/avatars', {
-      method: 'POST',
+  const payload = {
+    name,
+    personality: personality || `Character "${name}" appearing in a multi-scene short film. Stays in character.`,
+    referenceImage: portrait_url,
+    voice: { type: 'runway-live-preset', presetId: voice_preset },
+    imageProcessing: 'optimize',
+  };
+  const r = await fetch('https://api.dev.runwayml.com/v1/avatars', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
+      'X-Runway-Version': RUNWAY_VERSION,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) {
+    const txt = await r.text();
+    throw new Error(`Runway avatars POST ${r.status}: ${txt.slice(0, 600)}`);
+  }
+  const j = await r.json();
+  const avatarId = j.id;
+  // Poll for READY status (avatar processing is async)
+  const start = Date.now();
+  while (Date.now() - start < 120000) {
+    const sr = await fetch(`https://api.dev.runwayml.com/v1/avatars/${avatarId}`, {
       headers: {
-        'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
         'X-Runway-Version': RUNWAY_VERSION,
       },
-      body: JSON.stringify(payload),
     });
-    if (r.ok) {
-      const j = await r.json();
-      // Avatar is async; if there is a status field that is not READY, poll the avatar.
-      const avatarId = j.id || j.avatarId;
-      return { avatarId, raw: j };
+    if (sr.ok) {
+      const sj = await sr.json();
+      if (sj.status === 'READY') return { avatarId, voicePreset: voice_preset, raw: sj };
+      if (sj.status === 'FAILED') throw new Error(`Avatar ${avatarId} FAILED: ${sj.failureReason || 'unknown'}`);
     }
-    lastErr = `${r.status} ${await r.text()}`;
+    await new Promise(res => setTimeout(res, 3000));
   }
-  throw new Error(`Runway avatars create failed. Last error: ${lastErr.slice(0, 400)}`);
+  // Timed out waiting for READY — return id anyway, talking_head can still try
+  return { avatarId, voicePreset: voice_preset, raw: { status: 'TIMEOUT_PROCESSING' } };
 }
 
-async function runwayCreateAvatarVideo({ avatarId, audioUrl, text, voiceId, ratio = '720:1280' }) {
-  // POST /v1/avatar_videos — audio-driven OR text-driven
+async function runwayCreateAvatarVideo({ avatarId, audioUrl, text }) {
+  // POST /v1/avatar_videos — schema verified against @runwayml/sdk.
+  // Nested avatar object + nested speech object (text or audio).
   requireKey('RUNWAY_API_KEY');
-  const tryPayloads = [];
-  if (audioUrl) {
-    tryPayloads.push({ avatarId, audioUri: audioUrl, ratio });
-    tryPayloads.push({ avatarId, audio: audioUrl, ratio });
+  const speech = audioUrl
+    ? { type: 'audio', audio: audioUrl }
+    : { type: 'text',  text };
+  const payload = {
+    avatar: { type: 'custom', avatarId },
+    model: 'gwm1_avatars',
+    speech,
+  };
+  const r = await fetch('https://api.dev.runwayml.com/v1/avatar_videos', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
+      'X-Runway-Version': RUNWAY_VERSION,
+    },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) {
+    const txt = await r.text();
+    throw new Error(`Runway avatar_videos POST ${r.status}: ${txt.slice(0, 600)}`);
   }
-  if (text) {
-    tryPayloads.push({ avatarId, text, voiceId, ratio });
-    tryPayloads.push({ avatarId, prompt: text, voiceId, ratio });
-  }
-  let lastErr;
-  for (const payload of tryPayloads) {
-    const r = await fetch('https://api.dev.runwayml.com/v1/avatar_videos', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
-        'X-Runway-Version': RUNWAY_VERSION,
-      },
-      body: JSON.stringify(payload),
-    });
-    if (r.ok) {
-      const j = await r.json();
-      // Avatar video is async; the response has a task id. Poll.
-      const taskId = j.id || j.taskId;
-      const done = await runwayPollTask(taskId, { maxMs: 360000 });
-      const url = done.output && done.output[0];
-      if (!url) throw new Error('Runway avatar_videos returned no output URL');
-      return { url };
-    }
-    lastErr = `${r.status} ${await r.text()}`;
-  }
-  throw new Error(`Runway avatar_videos failed. Last error: ${lastErr.slice(0, 400)}`);
+  const j = await r.json();
+  const taskId = j.id;
+  const done = await runwayPollTask(taskId, { maxMs: 360000 });
+  const url = done.output && done.output[0];
+  if (!url) throw new Error('Runway avatar_videos returned no output URL');
+  return { url };
 }
 
 async function toolGenerateImageWithRefs({ prompt, character_refs = [], ratio = '720:1280' }) {
@@ -573,23 +584,24 @@ async function runTool(name, input) {
   }
 
   if (name === 'lock_character') {
-    const { portrait_url, name: charName } = input;
+    const { portrait_url, name: charName, voice_preset, personality } = input;
     if (!portrait_url || !charName) throw new Error('lock_character requires portrait_url and name.');
     let avatarId = null;
+    let voicePreset = voice_preset || 'adrian';
     let avatarErr = null;
     try {
-      const r = await runwayCreateAvatar({ portrait_url, name: charName });
+      const r = await runwayCreateAvatar({ portrait_url, name: charName, voice_preset: voicePreset, personality });
       avatarId = r.avatarId;
     } catch (e) {
       avatarErr = String(e.message).slice(0, 600);
       console.warn('runwayCreateAvatar failed:', avatarErr);
     }
-    SESSION.characters[charName] = { avatarId, portrait_url };
+    SESSION.characters[charName] = { avatarId, portrait_url, voicePreset };
     return {
-      forModel: `Character '${charName}' locked. avatarId=${avatarId || 'null'}. Avatar create error (if any): ${avatarErr || 'none'}.`,
+      forModel: `Character '${charName}' locked. avatarId=${avatarId || 'null'}. voicePreset=${voicePreset}. ${avatarErr ? 'Error: ' + avatarErr : 'Ready for talking_head.'}`,
       forUI: avatarErr
         ? { kind: 'text', text: `Avatar create error for '${charName}':\n${avatarErr}\n\nPortrait stored — scene_with_characters will still work for face-locked stills.`, label: `Locked: ${charName} (debug)` }
-        : { kind: 'image', url: portrait_url, label: `Locked: ${charName}` },
+        : { kind: 'image', url: portrait_url, label: `Locked: ${charName} (voice: ${voicePreset})` },
     };
   }
   if (name === 'cast_voice') {
@@ -609,26 +621,15 @@ async function runTool(name, input) {
     };
   }
   if (name === 'talking_head') {
-    const { character, text, voice_tag, label } = input;
+    const { character, text, label } = input;
     const charObj = SESSION.characters[character];
     if (!charObj) throw new Error(`talking_head: character '${character}' not locked. Call lock_character first.`);
-    if (!charObj.avatarId) throw new Error(`talking_head: character '${character}' has no avatar (Runway avatar create failed earlier). Cannot lip-sync.`);
-    // Step A — render TTS audio. Prefer Runway TTS (hackathon credits, ElevenLabs voice quality)
-    // and fall back to direct ElevenLabs if Runway TTS schema rejects.
-    const voiceId = SESSION.voices[voice_tag || character] || SESSION.voices[character] || DEFAULT_VOICE;
-    let audioDataUrl;
-    try {
-      const r = await runwayTextToSpeech({ text, voice_id: voiceId });
-      audioDataUrl = r.url;
-    } catch (eRunway) {
-      console.warn('Runway TTS failed, falling back to ElevenLabs:', String(eRunway.message).slice(0, 200));
-      const r = await toolSpeak({ text, voice_id: voiceId });
-      audioDataUrl = r.url;
-    }
-    // Step B — submit avatar video with audio
-    const { url: videoUrl } = await runwayCreateAvatarVideo({ avatarId: charObj.avatarId, audioUrl: audioDataUrl });
+    if (!charObj.avatarId) throw new Error(`talking_head: character '${character}' has no avatar (avatar create failed). Cannot lip-sync.`);
+    // Single call: Runway avatar_videos with speech.type:'text' uses the avatar's configured voice for TTS
+    // and produces a lip-synced MP4 in one shot. No separate TTS hop needed.
+    const { url: videoUrl } = await runwayCreateAvatarVideo({ avatarId: charObj.avatarId, text });
     return {
-      forModel: `Talking head for '${character}' rendered. URL: ${videoUrl}`,
+      forModel: `Talking head for '${character}' (voice ${charObj.voicePreset}) rendered. URL: ${videoUrl}`,
       forUI: { kind: 'video', url: videoUrl, label: label || `${character}: ${text.slice(0, 40)}` },
     };
   }
@@ -638,7 +639,7 @@ async function runTool(name, input) {
 // ---------- Skills (preset prompts that wrap the agent) ----------
 const SKILLS = {
   // Chloe-vs-history-style conversational short — face-locked characters in real environments, lip-synced dialogue
-  conversational_short: 'You are producing a 60-second Chloe-vs-history-style conversational short for: %TOPIC%. Plan first via plan tool. Then: (1) generate two character portraits via generate_image (cinematic, front-facing, period-accurate); (2) call lock_character TWICE (once for HER using the female portrait, once for HIM using the male portrait); (3) call cast_voice TWICE (HER → 21m00Tcm4TlvDq8ikWAM Rachel, HIM → NfHkocJCWwrSqAxfTcxk Mini-Me clone); (4) write a 5-beat dialogue script with 8-12 short exchanges (under 250 chars each line); (5) for each beat, call scene_with_characters with character_refs:[HER,HIM] to render the environment; (6) for EACH dialogue line, call talking_head with the speaking character + their line — this produces lip-synced video; (7) emit the final cut plan via write_text. Bias to action — do not stop until every line is rendered. The user wants a finished, repeatable conversation video on a single button-press.',
+  conversational_short: 'Produce a 60-second Chloe-vs-history-style conversational short for: %TOPIC%. Plan first. Then: (1) generate_image for HER portrait (cinematic, front-facing, period-accurate); (2) generate_image for HIM portrait (same era + style); (3) lock_character for HER with voice_preset:emma (or ruby/luna for variety); (4) lock_character for HIM with voice_preset:drew (or adrian/marcus for variety); (5) write a 5-beat dialogue script with 8-12 exchanges, each line under 250 chars; (6) for each beat, scene_with_characters with character_refs:[HER,HIM] to render the environment still; (7) for EACH dialogue line, talking_head with the speaking character — produces lip-synced video; (8) emit final cut plan via write_text listing all clip URLs in order. Bias to action — do not stop until every line is rendered.',
 
   // Original universal skills (kept for general-purpose use)
   research_brief:  'Research this topic with web_search and produce a one-page brief: %TOPIC%. Include 5–7 numbered citations as [1], [2]… and a short executive summary. Use write_text for the brief.',
