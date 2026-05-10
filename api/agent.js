@@ -15,7 +15,7 @@
 //   ELEVENLABS_VOICE_ID      (default: Roger's clone)
 //   ANTHROPIC_MODEL          (default: claude-sonnet-4-5)
 
-export const config = { runtime: 'nodejs', maxDuration: 300 };
+export const config = { runtime: 'edge' };
 
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 const DEFAULT_VOICE   = process.env.ELEVENLABS_VOICE_ID || 'NfHkocJCWwrSqAxfTcxk';
@@ -177,6 +177,19 @@ const TOOLS = [
       required: ['character', 'text']
     }
   },
+  {
+    name: 'poll_task',
+    description: 'Poll a Runway async task by id and return its output URL when SUCCEEDED. Used to retrieve the result of a talking_head call that returned only a task id (avatar videos take 60-180s).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        task_id: { type: 'string' },
+        label:   { type: 'string' }
+      },
+      required: ['task_id']
+    }
+  },
+
   { type: 'web_search_20250305', name: 'web_search', max_uses: 5 }
 ];
 
@@ -429,11 +442,14 @@ async function runwayTextToSpeech({ text, voice_id }) {
 
 async function runwayCreateAvatar({ portrait_url, name, voice_preset = 'adrian', personality }) {
   // POST /v1/avatars — schema verified against @runwayml/sdk types.
-  // Required: name, personality (system prompt), referenceImage (HTTPS URL), voice.
+  // Required: name, personality, referenceImage (HTTPS URL), voice.
+  // We do NOT block on READY here — Edge functions have ~25-60s caps, and avatar processing
+  // can take 30-90s. Return the id; status polling happens shortly later in the talking_head flow
+  // (which has its own task poll budget) or via a status-check tool.
   requireKey('RUNWAY_API_KEY');
   const payload = {
     name,
-    personality: personality || `Character "${name}" appearing in a multi-scene short film. Stays in character.`,
+    personality: personality || `Character "${name}" in a multi-scene short film.`,
     referenceImage: portrait_url,
     voice: { type: 'runway-live-preset', presetId: voice_preset },
     imageProcessing: 'optimize',
@@ -452,10 +468,13 @@ async function runwayCreateAvatar({ portrait_url, name, voice_preset = 'adrian',
     throw new Error(`Runway avatars POST ${r.status}: ${txt.slice(0, 600)}`);
   }
   const j = await r.json();
-  const avatarId = j.id;
-  // Poll for READY status (avatar processing is async)
+  return { avatarId: j.id, status: j.status, voicePreset: voice_preset };
+}
+
+async function runwayWaitAvatarReady(avatarId, { maxMs = 18000, intervalMs = 2000 } = {}) {
+  // Short poll inside Edge function budget (max ~20s). If still processing, return null.
   const start = Date.now();
-  while (Date.now() - start < 120000) {
+  while (Date.now() - start < maxMs) {
     const sr = await fetch(`https://api.dev.runwayml.com/v1/avatars/${avatarId}`, {
       headers: {
         'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
@@ -464,22 +483,19 @@ async function runwayCreateAvatar({ portrait_url, name, voice_preset = 'adrian',
     });
     if (sr.ok) {
       const sj = await sr.json();
-      if (sj.status === 'READY') return { avatarId, voicePreset: voice_preset, raw: sj };
+      if (sj.status === 'READY') return sj;
       if (sj.status === 'FAILED') throw new Error(`Avatar ${avatarId} FAILED: ${sj.failureReason || 'unknown'}`);
     }
-    await new Promise(res => setTimeout(res, 3000));
+    await new Promise(res => setTimeout(res, intervalMs));
   }
-  // Timed out waiting for READY — return id anyway, talking_head can still try
-  return { avatarId, voicePreset: voice_preset, raw: { status: 'TIMEOUT_PROCESSING' } };
+  return null;
 }
 
 async function runwayCreateAvatarVideo({ avatarId, audioUrl, text }) {
-  // POST /v1/avatar_videos — schema verified against @runwayml/sdk.
-  // Nested avatar object + nested speech object (text or audio).
+  // POST /v1/avatar_videos. Returns immediately with task id. Caller decides whether to
+  // poll inline (short budget) or hand the task id to the client to poll separately.
   requireKey('RUNWAY_API_KEY');
-  const speech = audioUrl
-    ? { type: 'audio', audio: audioUrl }
-    : { type: 'text',  text };
+  const speech = audioUrl ? { type: 'audio', audio: audioUrl } : { type: 'text', text };
   const payload = {
     avatar: { type: 'custom', avatarId },
     model: 'gwm1_avatars',
@@ -499,11 +515,7 @@ async function runwayCreateAvatarVideo({ avatarId, audioUrl, text }) {
     throw new Error(`Runway avatar_videos POST ${r.status}: ${txt.slice(0, 600)}`);
   }
   const j = await r.json();
-  const taskId = j.id;
-  const done = await runwayPollTask(taskId, { maxMs: 360000 });
-  const url = done.output && done.output[0];
-  if (!url) throw new Error('Runway avatar_videos returned no output URL');
-  return { url };
+  return { taskId: j.id };
 }
 
 async function toolGenerateImageWithRefs({ prompt, character_refs = [], ratio = '720:1280' }) {
@@ -624,13 +636,33 @@ async function runTool(name, input) {
     const { character, text, label } = input;
     const charObj = SESSION.characters[character];
     if (!charObj) throw new Error(`talking_head: character '${character}' not locked. Call lock_character first.`);
-    if (!charObj.avatarId) throw new Error(`talking_head: character '${character}' has no avatar (avatar create failed). Cannot lip-sync.`);
-    // Single call: Runway avatar_videos with speech.type:'text' uses the avatar's configured voice for TTS
-    // and produces a lip-synced MP4 in one shot. No separate TTS hop needed.
-    const { url: videoUrl } = await runwayCreateAvatarVideo({ avatarId: charObj.avatarId, text });
+    if (!charObj.avatarId) throw new Error(`talking_head: character '${character}' has no avatar (avatar create failed).`);
+    // Wait briefly for the avatar to reach READY if it isn't already
+    try { await runwayWaitAvatarReady(charObj.avatarId, { maxMs: 8000 }); } catch (e) { /* surface in next step */ }
+    const { taskId } = await runwayCreateAvatarVideo({ avatarId: charObj.avatarId, text });
+    // Try a short inline poll inside Edge budget (max ~12s). If task isn't done, return task_id for client-side poll.
+    const done = await runwayPollTask(taskId, { maxMs: 12000, intervalMs: 2000 }).catch(() => null);
+    if (done && done.output && done.output[0]) {
+      return {
+        forModel: `Talking head for '${character}' rendered: ${done.output[0]}`,
+        forUI: { kind: 'video', url: done.output[0], label: label || `${character}: ${text.slice(0, 40)}` },
+      };
+    }
     return {
-      forModel: `Talking head for '${character}' (voice ${charObj.voicePreset}) rendered. URL: ${videoUrl}`,
-      forUI: { kind: 'video', url: videoUrl, label: label || `${character}: ${text.slice(0, 40)}` },
+      forModel: `Talking head task started: taskId=${taskId} (still processing). Use poll_task to retrieve result later.`,
+      forUI: { kind: 'text', text: `Talking-head task pending for ${character}. taskId=${taskId}. Use poll_task tool to fetch the rendered MP4 once done (60-180s).`, label: label || `${character}: pending` },
+    };
+  }
+  if (name === 'poll_task') {
+    const { task_id, label } = input;
+    if (!task_id) throw new Error('poll_task requires task_id.');
+    const done = await runwayPollTask(task_id, { maxMs: 14000, intervalMs: 2000 }).catch(e => { throw e; });
+    const url = done && done.output && done.output[0];
+    if (!url) throw new Error(`poll_task: task ${task_id} has no output yet (status: ${done?.status||'?'}). Try again in a few seconds.`);
+    const isVideo = /\.mp4(\?|$)/i.test(url);
+    return {
+      forModel: `Task ${task_id} resolved: ${url}`,
+      forUI: { kind: isVideo ? 'video' : 'image', url, label: label || `Task ${task_id.slice(0, 8)}` },
     };
   }
   throw new Error(`Unknown tool: ${name}`);
