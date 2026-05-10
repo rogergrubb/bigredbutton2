@@ -34,6 +34,10 @@
   .grid{display:grid;grid-template-columns: 280px 1fr 380px;gap:18px;align-items:start}
   @media (max-width:1280px){ .grid{grid-template-columns: 240px 1fr 320px;} }
   @media (max-width:1100px){ .grid{grid-template-columns: 1fr;}.side{order:3} aside.side:last-child{order:2} }
+  /* Sticky right column on wide screens — stream/plan/sources follow you while you scroll */
+  @media (min-width:1101px) {
+    .grid > aside.side:last-child { position: sticky; top: 18px; align-self: start; max-height: calc(100vh - 36px); overflow-y: auto; }
+  }
   @media (max-width:600px){ .brb{width:160px;height:160px;font-size:18px} h1{font-size:28px} .wrap{padding:14px 14px 60px} }
 
   .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
