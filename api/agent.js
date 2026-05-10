@@ -576,17 +576,20 @@ async function runTool(name, input) {
     const { portrait_url, name: charName } = input;
     if (!portrait_url || !charName) throw new Error('lock_character requires portrait_url and name.');
     let avatarId = null;
+    let avatarErr = null;
     try {
       const r = await runwayCreateAvatar({ portrait_url, name: charName });
       avatarId = r.avatarId;
     } catch (e) {
-      // Even if Runway avatar create fails, store the portrait so face-locked stills still work.
-      console.warn('runwayCreateAvatar failed, storing portrait only:', String(e.message).slice(0, 200));
+      avatarErr = String(e.message).slice(0, 600);
+      console.warn('runwayCreateAvatar failed:', avatarErr);
     }
     SESSION.characters[charName] = { avatarId, portrait_url };
     return {
-      forModel: `Character '${charName}' locked. avatarId=${avatarId || 'null (stills-only)'}. Use scene_with_characters and talking_head with this name.`,
-      forUI: { kind: 'image', url: portrait_url, label: `Locked: ${charName}` + (avatarId ? '' : ' (talking-head unavailable)') },
+      forModel: `Character '${charName}' locked. avatarId=${avatarId || 'null'}. Avatar create error (if any): ${avatarErr || 'none'}.`,
+      forUI: avatarErr
+        ? { kind: 'text', text: `Avatar create error for '${charName}':\n${avatarErr}\n\nPortrait stored — scene_with_characters will still work for face-locked stills.`, label: `Locked: ${charName} (debug)` }
+        : { kind: 'image', url: portrait_url, label: `Locked: ${charName}` },
     };
   }
   if (name === 'cast_voice') {
