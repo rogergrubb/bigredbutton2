@@ -18,7 +18,8 @@
 export const config = { runtime: 'edge' };
 
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
-const DEFAULT_VOICE   = process.env.ELEVENLABS_VOICE_ID || 'NfHkocJCWwrSqAxfTcxk';
+const DEFAULT_VOICE   = process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM'; // Rachel — neutral female narrator
+const ROGER_CLONED_VOICE = 'NfHkocJCWwrSqAxfTcxk'; // Use ONLY when user explicitly asks for "Mini-Me", "Roger", or "founder" voice
 // Session-scoped character + voice registry. Each /api/agent request gets a fresh map
 // because the Edge Function instance is short-lived; for cross-conversation persistence
 // the user (or skill) must call lock_character / cast_voice at the start of each run.
@@ -218,6 +219,21 @@ const TOOLS = [
     }
   },
   {
+    name: 'cinematic_video_t2v',
+    description: 'Generate a finished cinematic video clip directly from a text prompt — fal.ai Seedance 2.0 text-to-video. Use for SINGLE-character showcase clips, monologues, or any shot where you do NOT need to lock a specific face from a portrait. NO Runway image step required (skips Runway content moderation entirely). Native synced dialogue + lip-sync + ambient audio. Returns request_id immediately. Poll with cinematic_video_poll. ~$0.05/clip 720p, ~$0.10/clip 1080p.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        prompt:    { type: 'string' },
+        duration:  { type: 'string', default: '10' },
+        resolution:{ type: 'string', default: '720p' },
+        aspect_ratio:{ type: 'string', default: '9:16' },
+        label:     { type: 'string' }
+      },
+      required: ['prompt']
+    }
+  },
+  {
     name: 'cinematic_video_poll',
     description: 'Poll a Seedance 2.0 task by request_id. Returns finished MP4 URL when COMPLETED. Generation takes 2-3 min — call this 90-180s after cinematic_video.',
     input_schema: {
@@ -285,8 +301,11 @@ Style:
   2. STOP and wait for user answers in next turn.
   3. Call \`lock_brief\` with mode:"finalize" and the full brief object.
   4. ONLY THEN fire generation. Saves real money: clarification is pennies, each Seedance retry is \$0.05+.
-- For SINGLE-CHARACTER vlogs: generate_image (selfie POV) → animate_image model:gen4.5 (free).
-- For MULTI-CHARACTER dialogue: scene_with_characters → cinematic_video (Seedance 2.0, ~\$0.05/clip, native lip-sync) → cinematic_video_poll until COMPLETED. Do NOT use Runway gen4.5 for multi-character dialogue — drift + no lip-sync.
+- For SINGLE-CHARACTER showcase clips, monologues, or any shot that does NOT need a pre-locked face from a portrait: use cinematic_video_t2v (Seedance 2.0 text-to-video, ~\$0.05/clip 720p / \$0.10/clip 1080p, native lip-sync, NO Runway image step, NO Runway moderation in the loop). Skip generate_image entirely.
+- For MULTI-CHARACTER dialogue with face-locked specific characters: scene_with_characters → cinematic_video (Seedance 2.0 image-to-video) → cinematic_video_poll. ~\$0.05/clip.
+- For SINGLE-CHARACTER vlogs on FREE Runway credits (no audio/dialogue needed): generate_image (selfie POV) → animate_image model:gen4.5.
+- Do NOT use Runway gen4.5 for multi-character dialogue — drift + no lip-sync.
+- VOICES: speak defaults to a neutral female narrator (Rachel). Use Roger's cloned voice ONLY if the user explicitly says "Mini-Me", "Roger's voice", or "founder voice" — otherwise pick voice_id appropriate to the character (Rachel 21m00Tcm4TlvDq8ikWAM = warm female; or any of the 30 Runway preset voices: emma, ruby, luna, nina for female, drew, marcus, adrian, vincent for male).
 
 If a tool fails (e.g. missing API key), continue with the tools that DO work and surface a graceful note in your final summary.`;
 
@@ -487,20 +506,48 @@ async function falSeedanceImageToVideo({ prompt, image_url, duration = '10', res
   return { requestId: j.request_id, statusUrl: j.status_url, responseUrl: j.response_url };
 }
 
+
+async function falSeedanceTextToVideo({ prompt, duration = '10', resolution = '720p', aspect_ratio = '9:16' }) {
+  if (!process.env.FAL_KEY) {
+    const err = new Error('Missing FAL_KEY env var.');
+    err.code = 'MISSING_KEY'; err.key = 'FAL_KEY';
+    throw err;
+  }
+  const r = await fetch('https://queue.fal.run/bytedance/seedance-2.0/text-to-video', {
+    method: 'POST',
+    headers: { 'Authorization': `Key ${process.env.FAL_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, duration: String(duration), resolution, aspect_ratio }),
+  });
+  if (!r.ok) {
+    const txt = await r.text();
+    throw new Error(`fal.ai Seedance T2V POST ${r.status}: ${txt.slice(0, 600)}`);
+  }
+  const j = await r.json();
+  return { requestId: j.request_id };
+}
+
 async function falPollSeedance({ request_id }) {
   if (!process.env.FAL_KEY) throw new Error('Missing FAL_KEY env var.');
-  const statusUrl = `https://queue.fal.run/bytedance/seedance-2.0/requests/${request_id}/status`;
-  const sr = await fetch(statusUrl, { headers: { 'Authorization': `Key ${process.env.FAL_KEY}` } });
-  if (!sr.ok) throw new Error(`fal.ai status ${sr.status}: ${await sr.text()}`);
-  const sj = await sr.json();
-  if (sj.status !== 'COMPLETED') return { status: sj.status, queue_position: sj.queue_position };
-  const responseUrl = `https://queue.fal.run/bytedance/seedance-2.0/requests/${request_id}`;
-  const rr = await fetch(responseUrl, { headers: { 'Authorization': `Key ${process.env.FAL_KEY}` } });
-  if (!rr.ok) throw new Error(`fal.ai result ${rr.status}: ${await rr.text()}`);
-  const rj = await rr.json();
-  const url = rj.video && rj.video.url;
-  if (!url) throw new Error('Seedance COMPLETED but no video URL');
-  return { status: 'COMPLETED', url, contentType: rj.video?.content_type, fileSize: rj.video?.file_size };
+  // Probe both i2v and t2v URL conventions
+  const tryBaseUrls = [
+    `https://queue.fal.run/bytedance/seedance-2.0/requests/${request_id}`,
+    `https://queue.fal.run/bytedance/seedance-2.0/text-to-video/requests/${request_id}`,
+    `https://queue.fal.run/bytedance/seedance-2.0/image-to-video/requests/${request_id}`,
+  ];
+  let lastErr;
+  for (const baseUrl of tryBaseUrls) {
+    const sr = await fetch(`${baseUrl}/status`, { headers: { 'Authorization': `Key ${process.env.FAL_KEY}` } });
+    if (!sr.ok) { lastErr = `status ${sr.status} at ${baseUrl}`; continue; }
+    const sj = await sr.json();
+    if (sj.status !== 'COMPLETED') return { status: sj.status, queue_position: sj.queue_position };
+    const rr = await fetch(baseUrl, { headers: { 'Authorization': `Key ${process.env.FAL_KEY}` } });
+    if (!rr.ok) { lastErr = `result ${rr.status}`; continue; }
+    const rj = await rr.json();
+    const url = rj.video && rj.video.url;
+    if (!url) { lastErr = 'no video url'; continue; }
+    return { status: 'COMPLETED', url, contentType: rj.video?.content_type, fileSize: rj.video?.file_size };
+  }
+  throw new Error(`fal.ai poll failed: ${lastErr}`);
 }
 
 // ---------- Runway character + avatar pipeline ----------
@@ -813,6 +860,15 @@ async function runTool(name, input) {
     return {
       forModel: `Seedance 2.0 task started. request_id="${r.requestId}". 2-3 min to render. Call cinematic_video_poll with request_id="${r.requestId}".`,
       forUI: { kind: 'text', text: `Cinematic video pending. request_id=${r.requestId}. Use cinematic_video_poll (2-3 min).`, label: label || 'Cinematic clip pending', requestId: r.requestId },
+    };
+  }
+  if (name === 'cinematic_video_t2v') {
+    const { prompt, duration, resolution, aspect_ratio, label } = input;
+    if (!prompt) throw new Error('cinematic_video_t2v requires prompt.');
+    const r = await falSeedanceTextToVideo({ prompt, duration, resolution, aspect_ratio });
+    return {
+      forModel: `Seedance 2.0 text-to-video task started. request_id="${r.requestId}". 2-3 min. Call cinematic_video_poll with request_id="${r.requestId}".`,
+      forUI: { kind: 'text', text: `Cinematic video pending (text-to-video). request_id=${r.requestId}.`, label: label || 'Cinematic clip pending', requestId: r.requestId },
     };
   }
   if (name === 'cinematic_video_poll') {
