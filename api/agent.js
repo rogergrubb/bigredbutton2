@@ -153,7 +153,7 @@ function sse(controller, event, data) {
 async function callClaude({ messages }) {
   const body = {
     model: ANTHROPIC_MODEL,
-    max_tokens: 4096,
+    max_tokens: 16384,
     system: SYSTEM_PROMPT,
     tools: TOOLS,
     messages,
