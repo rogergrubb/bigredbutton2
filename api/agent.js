@@ -389,6 +389,43 @@ async function toolReadUrl({ url, max_chars = 12000 }) {
 
 // ---------- Runway character + avatar pipeline ----------
 
+
+async function runwayTextToSpeech({ text, voice_id }) {
+  // Runway's wrapper around ElevenLabs — same voice quality, billed against Runway hackathon credits.
+  // POST /v1/text_to_speech — best-effort schema since the docs are JS-rendered.
+  requireKey('RUNWAY_API_KEY');
+  const tryPayloads = [
+    { text, voiceId: voice_id },
+    { promptText: text, voiceId: voice_id },
+    { input: text, voice: voice_id },
+  ];
+  let lastErr;
+  for (const payload of tryPayloads) {
+    const r = await fetch('https://api.dev.runwayml.com/v1/text_to_speech', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.RUNWAY_API_KEY}`,
+        'X-Runway-Version': RUNWAY_VERSION,
+      },
+      body: JSON.stringify(payload),
+    });
+    if (r.ok) {
+      const j = await r.json();
+      // Two response shapes possible: synchronous (returns audio URL) or async task (returns id, poll)
+      if (j.output && j.output[0]) return { url: j.output[0] };
+      if (j.audioUrl) return { url: j.audioUrl };
+      if (j.id || j.taskId) {
+        const done = await runwayPollTask(j.id || j.taskId);
+        const out = done.output && done.output[0];
+        if (out) return { url: out };
+      }
+    }
+    lastErr = `${r.status} ${await r.text().catch(() => '')}`;
+  }
+  throw new Error(`Runway text_to_speech failed. Last error: ${lastErr.slice(0, 400)}`);
+}
+
 async function runwayCreateAvatar({ portrait_url, name }) {
   // POST /v1/avatars to register a persistent custom avatar.
   // Schema is best-effort: Runway's docs list `referenceImage` for create-avatar.
@@ -573,9 +610,18 @@ async function runTool(name, input) {
     const charObj = SESSION.characters[character];
     if (!charObj) throw new Error(`talking_head: character '${character}' not locked. Call lock_character first.`);
     if (!charObj.avatarId) throw new Error(`talking_head: character '${character}' has no avatar (Runway avatar create failed earlier). Cannot lip-sync.`);
-    // Step A — render TTS audio in the chosen voice
+    // Step A — render TTS audio. Prefer Runway TTS (hackathon credits, ElevenLabs voice quality)
+    // and fall back to direct ElevenLabs if Runway TTS schema rejects.
     const voiceId = SESSION.voices[voice_tag || character] || SESSION.voices[character] || DEFAULT_VOICE;
-    const { url: audioDataUrl } = await toolSpeak({ text, voice_id: voiceId });
+    let audioDataUrl;
+    try {
+      const r = await runwayTextToSpeech({ text, voice_id: voiceId });
+      audioDataUrl = r.url;
+    } catch (eRunway) {
+      console.warn('Runway TTS failed, falling back to ElevenLabs:', String(eRunway.message).slice(0, 200));
+      const r = await toolSpeak({ text, voice_id: voiceId });
+      audioDataUrl = r.url;
+    }
     // Step B — submit avatar video with audio
     const { url: videoUrl } = await runwayCreateAvatarVideo({ avatarId: charObj.avatarId, audioUrl: audioDataUrl });
     return {
