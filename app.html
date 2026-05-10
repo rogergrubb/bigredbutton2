@@ -288,7 +288,23 @@
     <main>
       <section class="card">
         <h3>1 · State the outcome</h3>
-        <textarea id="prompt" placeholder="e.g. My faceless sleep videos are gaining views. Build me a channel strategy."></textarea>
+        <div id="gasGauge" style="display:flex;align-items:center;gap:14px;margin:0 0 16px 0;padding:12px 16px;background:#0d0d12;border:1px solid #2a2a35;border-radius:8px;font-family:'IBM Plex Mono',ui-monospace,monospace">
+  <span style="font-size:14px">⛽</span>
+  <div style="flex:1">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+      <span style="font-size:11px;text-transform:uppercase;letter-spacing:1px;opacity:0.6">FAL.AI BALANCE</span>
+      <span id="gasBalance" style="font-size:16px;font-weight:700;color:#7cff9e">$0.00</span>
+    </div>
+    <div style="height:6px;background:#1a1a25;border-radius:3px;overflow:hidden">
+      <div id="gasFill" style="height:100%;width:0%;background:linear-gradient(90deg,#7cff9e,#ffd700);transition:width 0.4s,background 0.4s"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10px;opacity:0.55">
+      <span id="gasClipsLeft">~0 clips left</span>
+      <span><a href="#" id="gasSetBalance" style="color:#7cc4ff;text-decoration:none">edit balance</a> · <a href="#" id="gasUseMyKey" style="color:#ffb380;text-decoration:none">use my key</a></span>
+    </div>
+  </div>
+</div>
+<textarea id="prompt" placeholder="e.g. My faceless sleep videos are gaining views. Build me a channel strategy."></textarea>
         <div class="row">
           <span class="chip" data-fill="Build a landing page for a SaaS called Inboxer that turns email into structured tasks.">Inboxer landing</span>
           <span class="chip" data-fill="Research the top 3 trends in solopreneur AI tooling for 2026 and summarize with sources.">Research trends</span>
@@ -436,6 +452,86 @@ setTimeout(() => {
   if (banner) banner.addEventListener('click', toggleDrawer);
   if (toggle) toggle.addEventListener('click', toggleDrawer);
 }, 200);
+
+// === Gas gauge — fal.ai balance tracking + judge fallback ===
+const GAS_KEY = "brb_fal_balance_v1";
+const GAS_STARTING_KEY = "brb_fal_starting_v1";
+const GAS_USER_KEY = "brb_fal_user_key_v1";
+function loadBalance(){ const v = parseFloat(localStorage.getItem(GAS_KEY)); return isNaN(v) ? 5.00 : v; }
+function loadStarting(){ const v = parseFloat(localStorage.getItem(GAS_STARTING_KEY)); return isNaN(v) ? 5.00 : v; }
+function saveBalance(amount){ localStorage.setItem(GAS_KEY, String(amount.toFixed(2))); renderGasGauge(); }
+function saveStarting(amount){ localStorage.setItem(GAS_STARTING_KEY, String(amount.toFixed(2))); }
+// Cost estimates per render type (based on observed fal.ai dashboard delta)
+function estimateCost(toolName, input){
+  if (toolName !== 'cinematic_video' && toolName !== 'cinematic_video_t2v') return 0;
+  const dur = parseInt(input?.duration) || 10;
+  const res = (input?.resolution || '720p').toLowerCase();
+  // Base: $0.04/sec at 720p, $0.08/sec at 1080p (with native audio)
+  const ratePerSec = res.includes('1080') ? 0.08 : (res.includes('480') ? 0.02 : 0.04);
+  return Math.round(dur * ratePerSec * 100) / 100;
+}
+function decrementBalance(amount){
+  if (amount <= 0) return;
+  const cur = loadBalance();
+  const next = Math.max(0, cur - amount);
+  saveBalance(next);
+  if (next < 0.50) showJudgeFallback(amount);
+}
+function renderGasGauge(){
+  const bal = loadBalance();
+  const start = loadStarting();
+  const pct = start > 0 ? Math.max(0, Math.min(100, (bal / start) * 100)) : 0;
+  const balEl = document.getElementById('gasBalance');
+  const fillEl = document.getElementById('gasFill');
+  const clipsEl = document.getElementById('gasClipsLeft');
+  if (balEl) balEl.textContent = '$' + bal.toFixed(2);
+  if (fillEl) {
+    fillEl.style.width = pct + '%';
+    if (bal < 0.50) fillEl.style.background = '#ff3b3b';
+    else if (bal < 2.00) fillEl.style.background = 'linear-gradient(90deg,#ffd700,#ff8c1a)';
+    else fillEl.style.background = 'linear-gradient(90deg,#7cff9e,#ffd700)';
+    if (balEl) balEl.style.color = bal < 0.50 ? '#ff7c7c' : (bal < 2.00 ? '#ffd700' : '#7cff9e');
+  }
+  if (clipsEl) {
+    const clips720 = Math.floor(bal / 0.40);
+    const clips1080 = Math.floor(bal / 0.80);
+    clipsEl.textContent = '~' + clips720 + ' clips at 720p · ~' + clips1080 + ' at 1080p';
+  }
+}
+function showJudgeFallback(triedAmount){
+  if (document.getElementById('judgeFallback')) return;
+  const wrap = document.createElement('div');
+  wrap.id = 'judgeFallback';
+  wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px';
+  wrap.innerHTML = '<div style="background:#1a0a14;border:2px solid #ff6b35;border-radius:12px;padding:32px;max-width:520px;color:#fff;font-family:\'IBM Plex Mono\',monospace"><h2 style="margin:0 0 12px;color:#ffb380">⛽ Tank empty.</h2><p style="margin:0 0 16px;line-height:1.5">The hackathon submission has burned through Roger\'s starter $5 on fal.ai. To keep generating videos, paste your own fal.ai API key below — it stays in your browser only, never sent to our server, and is used for the rest of your session.</p><p style="margin:0 0 8px;font-size:12px;opacity:0.7">Get a free key: <a href="https://fal.ai/dashboard/keys" target="_blank" style="color:#7cc4ff">fal.ai/dashboard/keys</a></p><input id="judgeKeyInput" placeholder="key_id:secret" style="width:100%;padding:10px;background:#0a0610;border:1px solid #ff6b35;color:#fff;border-radius:6px;font-family:monospace;margin-bottom:12px"/><div style="display:flex;gap:10px"><button id="judgeKeySave" style="flex:1;padding:10px;background:#ff3b3b;color:#fff;border:none;border-radius:6px;font-weight:700;cursor:pointer">USE MY KEY</button><button id="judgeKeyClose" style="padding:10px 20px;background:transparent;color:#aaa;border:1px solid #444;border-radius:6px;cursor:pointer">later</button></div></div>';
+  document.body.appendChild(wrap);
+  document.getElementById('judgeKeySave').onclick = () => {
+    const k = document.getElementById('judgeKeyInput').value.trim();
+    if (!k.includes(':')) { alert('Key format: key_id:secret'); return; }
+    localStorage.setItem(GAS_USER_KEY, k);
+    // Roger's pattern: assume judge has fresh credits — reset gauge to $5
+    saveBalance(5.00); saveStarting(5.00);
+    wrap.remove();
+    toast('✓ Your key is active. Tank reset to $5.');
+  };
+  document.getElementById('judgeKeyClose').onclick = () => wrap.remove();
+}
+// Manual balance editing
+function setupGasGaugeControls(){
+  const setLink = document.getElementById('gasSetBalance');
+  const useMyLink = document.getElementById('gasUseMyKey');
+  if (setLink) setLink.onclick = (e) => {
+    e.preventDefault();
+    const cur = loadBalance().toFixed(2);
+    const v = prompt('Set fal.ai balance (read from fal.ai/dashboard/usage-billing):', cur);
+    if (v !== null) {
+      const n = parseFloat(v);
+      if (!isNaN(n) && n >= 0) { saveBalance(n); saveStarting(Math.max(loadStarting(), n)); }
+    }
+  };
+  if (useMyLink) useMyLink.onclick = (e) => { e.preventDefault(); showJudgeFallback(0); };
+}
+setTimeout(() => { renderGasGauge(); setupGasGaugeControls(); }, 100);
 
 // Active-tool tracking
 function setActiveTool(name){
@@ -628,6 +724,9 @@ function handleEvent(event, payload){
   if (event === "tool_call") {
     setActiveTool(payload.name);
     ev("tool", payload.name + " → " + truncate(JSON.stringify(payload.input), 220));
+    // Decrement gas gauge for paid renders (Seedance via fal.ai)
+    const cost = estimateCost(payload.name, payload.input);
+    if (cost > 0) decrementBalance(cost);
     return;
   }
   if (event === "tool_result") {
