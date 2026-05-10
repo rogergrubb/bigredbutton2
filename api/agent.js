@@ -302,6 +302,7 @@ Style:
   3. Call \`lock_brief\` with mode:"finalize" and the full brief object.
   4. ONLY THEN fire generation. Saves real money: clarification is pennies, each Seedance retry is \$0.05+.
 - For SINGLE-CHARACTER showcase clips, monologues, or any shot that does NOT need a pre-locked face from a portrait: use cinematic_video_t2v (Seedance 2.0 text-to-video, ~\$0.05/clip 720p / \$0.10/clip 1080p, native lip-sync, NO Runway image step, NO Runway moderation in the loop). Skip generate_image entirely.
+- POLLING DISCIPLINE: cinematic_video and cinematic_video_t2v already do an 8s inline grace check. cinematic_video_poll waits 12s internally before checking. Call poll AT MOST ONCE per turn after submission. If status is still PROCESSING after one poll, STOP polling — the UI Pending Renders panel handles long waits and lets the user re-fetch when ready. Rapid-fire polling burns Edge function time and confuses users.
 - For MULTI-CHARACTER dialogue with face-locked specific characters: scene_with_characters → cinematic_video (Seedance 2.0 image-to-video) → cinematic_video_poll. ~\$0.05/clip.
 - For SINGLE-CHARACTER vlogs on FREE Runway credits (no audio/dialogue needed): generate_image (selfie POV) → animate_image model:gen4.5.
 - Do NOT use Runway gen4.5 for multi-character dialogue — drift + no lip-sync.
@@ -857,8 +858,17 @@ async function runTool(name, input) {
     const { image_url, prompt, duration, resolution, aspect_ratio, label } = input;
     if (!image_url || !prompt) throw new Error('cinematic_video requires image_url and prompt.');
     const r = await falSeedanceImageToVideo({ image_url, prompt, duration, resolution, aspect_ratio });
+    // Brief 8s grace check in case render lands fast (rare but possible for short i2v clips)
+    await new Promise(res => setTimeout(res, 8000));
+    const check = await falPollSeedance({ request_id: r.requestId }).catch(() => ({ status: 'IN_PROGRESS' }));
+    if (check.status === 'COMPLETED' && check.url) {
+      return {
+        forModel: `Seedance task ${r.requestId} COMPLETED inline: ${check.url}`,
+        forUI: { kind: 'video', url: check.url, label: label || 'Cinematic clip' },
+      };
+    }
     return {
-      forModel: `Seedance 2.0 task started. request_id="${r.requestId}". 2-3 min to render. Call cinematic_video_poll with request_id="${r.requestId}".`,
+      forModel: `Seedance 2.0 task started. request_id="${r.requestId}". Status: ${check.status}. Render takes 2-3 min. DO NOT poll again in this turn — the UI shows a Pending Renders panel; the user will fetch when ready. Move on or end the turn.`,
       forUI: { kind: 'text', text: `Cinematic video pending. request_id=${r.requestId}. Use cinematic_video_poll (2-3 min).`, label: label || 'Cinematic clip pending', requestId: r.requestId },
     };
   }
@@ -866,19 +876,30 @@ async function runTool(name, input) {
     const { prompt, duration, resolution, aspect_ratio, label } = input;
     if (!prompt) throw new Error('cinematic_video_t2v requires prompt.');
     const r = await falSeedanceTextToVideo({ prompt, duration, resolution, aspect_ratio });
+    await new Promise(res => setTimeout(res, 8000));
+    const check = await falPollSeedance({ request_id: r.requestId }).catch(() => ({ status: 'IN_PROGRESS' }));
+    if (check.status === 'COMPLETED' && check.url) {
+      return {
+        forModel: `Seedance T2V task ${r.requestId} COMPLETED inline: ${check.url}`,
+        forUI: { kind: 'video', url: check.url, label: label || 'Cinematic clip' },
+      };
+    }
     return {
-      forModel: `Seedance 2.0 text-to-video task started. request_id="${r.requestId}". 2-3 min. Call cinematic_video_poll with request_id="${r.requestId}".`,
-      forUI: { kind: 'text', text: `Cinematic video pending (text-to-video). request_id=${r.requestId}.`, label: label || 'Cinematic clip pending', requestId: r.requestId },
+      forModel: `Seedance 2.0 T2V task started. request_id="${r.requestId}". Status: ${check.status}. Render takes 2-3 min. DO NOT poll again in this turn — the UI shows a Pending Renders panel; the user will fetch when ready. End the turn cleanly.`,
+      forUI: { kind: 'text', text: `Cinematic video pending. request_id=${r.requestId}.`, label: label || 'Cinematic clip pending', requestId: r.requestId },
     };
   }
   if (name === 'cinematic_video_poll') {
     const { request_id, label } = input;
     if (!request_id) throw new Error('cinematic_video_poll requires request_id.');
+    // Sleep 12s before checking — Seedance renders take 2-3 min so a 1s poll loop is wasteful.
+    // This consumes useful time per poll and avoids 7-8 rapid-fire status pings.
+    await new Promise(res => setTimeout(res, 12000));
     const r = await falPollSeedance({ request_id });
     if (r.status !== 'COMPLETED') {
       return {
-        forModel: `Seedance task ${request_id} status=${r.status}. Call again in 30-60s.`,
-        forUI: { kind: 'text', text: `Status: ${r.status}. Try again in 30-60s.`, label: label || `Seedance ${r.status}`, status: r.status },
+        forModel: `Seedance task ${request_id} status=${r.status} after 12s wait. DO NOT poll again in this turn. Tell the user the UI's Pending Renders panel will let them fetch when ready, then end the turn.`,
+        forUI: { kind: 'text', text: `Status: ${r.status}. Use the Pending Renders panel to fetch when Seedance finishes (~2-3 min total).`, label: label || `Seedance ${r.status}`, status: r.status },
       };
     }
     return {
