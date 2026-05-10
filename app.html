@@ -291,7 +291,7 @@
     <main>
       <section class="card">
         <h3>1 · State the outcome</h3>
-        <div id="gasGauge" style="display:flex;align-items:center;gap:14px;margin:0 0 16px 0;padding:12px 16px;background:#0d0d12;border:1px solid #2a2a35;border-radius:8px;font-family:'IBM Plex Mono',ui-monospace,monospace">
+        <div id="gasGauge" style="display:none;align-items:center;gap:14px;margin:0 0 16px 0;padding:12px 16px;background:#0d0d12;border:1px solid #2a2a35;border-radius:8px;font-family:'IBM Plex Mono',ui-monospace,monospace">
   <span style="font-size:14px">⛽</span>
   <div style="flex:1">
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
@@ -322,7 +322,7 @@
         </div>
       </section>
 
-      <div id="activeTool" style="display:none;padding:8px 12px;margin:0 0 12px 0;background:rgba(255,107,53,0.12);border-left:3px solid #ff6b35;border-radius:4px;font-size:12px;font-family:'IBM Plex Mono',ui-monospace,monospace;color:#ffb380">
+      <div id="activeTool" style="display:none;position:fixed;top:80px;right:24px;z-index:9990;padding:12px 18px;background:linear-gradient(135deg,rgba(255,107,53,0.95),rgba(255,59,59,0.95));border:1px solid #ff8c1a;border-radius:10px;font-size:13px;font-weight:700;font-family:'IBM Plex Mono',ui-monospace,monospace;color:#fff;box-shadow:0 8px 32px rgba(255,107,53,0.5);backdrop-filter:blur(8px);min-width:240px">
   <span id="activeToolName"></span> <span id="activeToolElapsed" style="opacity:0.7"></span>
 </div>
 <section id="results" class="results"></section>
@@ -481,6 +481,10 @@ function decrementBalance(amount){
   if (next < 0.50) showJudgeFallback(amount);
 }
 function renderGasGauge(){
+  // Roger pivoted off fal.ai — keep gauge hidden. Logic preserved for future re-enable.
+  const gg = document.getElementById('gasGauge');
+  if (gg) gg.style.display = 'none';
+  return;
   const bal = loadBalance();
   const start = loadStarting();
   const pct = start > 0 ? Math.max(0, Math.min(100, (bal / start) * 100)) : 0;
