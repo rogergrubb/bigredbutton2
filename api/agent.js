@@ -133,6 +133,13 @@ Try next:
 
 This helps the user iterate. Make the suggestions concrete and pressable.
 
+EXCEPTION — DIRECTIVE MODE:
+When the user explicitly says EXECUTE, DO NOT SUMMARIZE, JUST CALL THE TOOL,
+or names a specific tool to fire (e.g. "fire animate_image now"), CALL THE
+NAMED TOOL IMMEDIATELY with the supplied arguments. Do NOT plan. Do NOT
+summarize. Do NOT add a Try next section. Tool call only, single shot.
+The user is treating you like an RPC, not a planner. Honor that.
+
 Style:
 - BIAS TO ACTION. If the outcome is ambiguous, choose tastefully and ship.
 - Every visible deliverable goes through a tool. Don't return prose summaries that should be in write_text.
@@ -417,6 +424,49 @@ export default async function handler(req) {
 
   if (!process.env.ANTHROPIC_API_KEY) {
     return new Response('Server missing ANTHROPIC_API_KEY env var. Set it in Vercel project settings.', { status: 500 });
+  }
+
+  // === DIRECT TOOL EXECUTION SHORT-CIRCUIT ===
+  // Bypass Claude reasoning entirely when user supplies an explicit tool spec.
+  // Format: prompt starts with "EXEC:" followed by JSON like:
+  //   EXEC: {"tool":"animate_image","input":{"image_url":"https://...","prompt":"...","duration":5,"label":"..."}}
+  // Use this for guaranteed deterministic tool calls (no Claude summarization).
+  const execMatch = prompt.match(/^\s*EXEC:\s*(\{[\s\S]*\})\s*$/);
+  if (execMatch) {
+    let spec;
+    try { spec = JSON.parse(execMatch[1]); }
+    catch (e) {
+      return new Response('EXEC: payload must be valid JSON. ' + e.message, { status: 400 });
+    }
+    if (!spec.tool || typeof spec.tool !== 'string') {
+      return new Response('EXEC: payload requires {"tool":"..."}', { status: 400 });
+    }
+    const stream = new ReadableStream({
+      async start(controller) {
+        const close = () => { try { controller.close(); } catch {} };
+        const send = (event, data) => { try { sse(controller, event, data); } catch {} };
+        send('start', { ts: Date.now(), prompt: 'EXEC: ' + spec.tool, mode: 'direct' });
+        send('tool_call', { name: spec.tool, input: spec.input || {} });
+        try {
+          const { forModel, forUI } = await runTool(spec.tool, spec.input || {});
+          send('tool_result', forUI);
+          send('final', { text: 'Direct tool execution complete: ' + spec.tool, assistant_content: [] });
+        } catch (e) {
+          send('error', { text: `${spec.tool}: ${String(e.message || e)}` });
+        } finally {
+          send('done', { ok: true });
+          close();
+        }
+      },
+    });
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/event-stream; charset=utf-8',
+        'Cache-Control': 'no-cache, no-transform',
+        'Connection': 'keep-alive',
+        'X-Accel-Buffering': 'no',
+      },
+    });
   }
 
   const stream = new ReadableStream({
