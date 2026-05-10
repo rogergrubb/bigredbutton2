@@ -507,7 +507,7 @@ async function falSeedanceImageToVideo({ prompt, image_url, duration = '10', res
   if (!r.ok) {
     const txt = await r.text();
     if (r.status === 403 && txt.includes('Exhausted balance')) {
-      const err = new Error('fal.ai balance exhausted — Roger\'s starter credits are spent. Use the "use my key" link in the BRB UI to add your own fal.ai key, or top up at fal.ai/dashboard/billing.');
+      const err = new Error('fal.ai balance exhausted — top up at fal.ai/dashboard/billing or click 'use my key' in the BRB UI to add your own key.');
       err.code = 'FAL_EXHAUSTED'; err.userFacing = true;
       throw err;
     }
@@ -532,7 +532,7 @@ async function falSeedanceTextToVideo({ prompt, duration = '10', resolution = '7
   if (!r.ok) {
     const txt = await r.text();
     if (r.status === 403 && txt.includes('Exhausted balance')) {
-      const err = new Error('fal.ai balance exhausted — Roger\'s starter credits are spent. Use the "use my key" link in the BRB UI to add your own fal.ai key, or top up at fal.ai/dashboard/billing.');
+      const err = new Error('fal.ai balance exhausted — top up at fal.ai/dashboard/billing or click 'use my key' in the BRB UI to add your own key.');
       err.code = 'FAL_EXHAUSTED'; err.userFacing = true;
       throw err;
     }
@@ -836,7 +836,7 @@ async function runTool(name, input) {
     const { task_id, label } = input;
     if (!task_id) throw new Error('poll_task requires task_id.');
     if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(task_id)) {
-      throw new Error(`poll_task: invalid task_id format (expected UUID, got "${task_id.slice(0, 40)}")`);
+      throw new Error(`invalid task_id format (expected UUID, got '${task_id.slice(0, 40)}')`);
     }
     requireKey('RUNWAY_API_KEY');
     const r = await fetch(`https://api.dev.runwayml.com/v1/tasks/${task_id}`, {
@@ -845,10 +845,11 @@ async function runTool(name, input) {
         'X-Runway-Version': RUNWAY_VERSION,
       },
     });
-    if (r.status === 404) throw new Error(`poll_task: task not found (id=${task_id.slice(0, 8)}...)`);
+    if (r.status === 404) throw new Error(`task not found (id=${task_id.slice(0, 8)}...)`);
     if (!r.ok) {
       const txt = await r.text();
-      throw new Error(`poll_task: Runway ${r.status}: ${txt.slice(0, 200)}`);
+      if (r.status === 400 && txt.includes('invalid_format')) throw new Error(`invalid task_id format`);
+      throw new Error(`Runway ${r.status}: ${txt.slice(0, 200)}`);
     }
     const j = await r.json();
     if (j.status === 'SUCCEEDED') {
@@ -911,12 +912,12 @@ async function runTool(name, input) {
     const { request_id, label } = input;
     if (!request_id) throw new Error('cinematic_video_poll requires request_id.');
     if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(request_id)) {
-      throw new Error(`cinematic_video_poll: invalid request_id format (expected UUID)`);
+      throw new Error(`invalid request_id format (expected UUID)`);
     }
     await new Promise(res => setTimeout(res, 12000));
     const r = await falPollSeedance({ request_id }).catch(e => {
       const msg = String(e.message || e);
-      if (msg.includes('405') || msg.includes('404')) throw new Error(`cinematic_video_poll: task not found (id=${request_id.slice(0, 8)}...)`);
+      if (msg.includes('405') || msg.includes('404')) throw new Error(`task not found (id=${request_id.slice(0, 8)}...)`);
       throw e;
     });
     if (r.status !== 'COMPLETED') {
