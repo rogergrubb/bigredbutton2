@@ -201,6 +201,17 @@
 </style>
 </head>
 <body>
+<div id="pendingBanner" style="display:none;position:sticky;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#ff6b35 0%,#ff3b3b 100%);color:white;padding:14px 24px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:14px;font-weight:600;box-shadow:0 4px 24px rgba(255,107,53,0.4);cursor:pointer;display:flex;align-items:center;gap:16px;justify-content:space-between">
+  <div style="display:flex;align-items:center;gap:14px;flex:1">
+    <span style="font-size:20px">🎬</span>
+    <span id="pendingBannerCount">0 renders in flight</span>
+    <span id="pendingBannerDetail" style="opacity:0.85;font-weight:400;font-size:13px"></span>
+  </div>
+  <button id="pendingBannerToggle" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);color:white;padding:6px 14px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600">VIEW ALL</button>
+</div>
+<div id="pendingDrawer" style="display:none;position:sticky;top:48px;left:0;right:0;z-index:9998;background:#1a0a14;border-bottom:2px solid #ff6b35;padding:14px 24px;max-height:240px;overflow-y:auto">
+  <div id="pendingRenders" style="display:flex;flex-direction:column;gap:8px"></div>
+</div>
 <div class="wrap">
   <header>
     <div class="brand">BIG <b>RED</b> BUTTON <span class="tag live">v0.2 · live</span></div>
@@ -266,8 +277,6 @@
         </div>
 
       <section class="card">
-        <h3>Pending renders</h3>
-        <div id="pendingRenders" class="gallery" style="margin-bottom:16px;max-height:200px;font-size:12px"></div>
         <h3>Artifact gallery</h3>
         <div id="gallery" class="gallery">
           <div class="empty">Anything Mini-Me ships will appear here.</div>
@@ -378,12 +387,29 @@ function fmtAgo(ts){
 }
 function renderPending(){
   const items = loadPending();
-  if (!items.length) { pendingEl.innerHTML = '<div class="empty" style="font-size:11px">No renders in flight.</div>'; return; }
-  pendingEl.innerHTML = items.map((it, i) => {
-    const ago = fmtAgo(it.submittedAt);
-    return '<div class="artifact" data-rid="'+escapeHtml(it.requestId)+'" style="padding:6px 8px;cursor:pointer;border-left:2px solid #ff6b35;background:rgba(255,107,53,0.06);margin-bottom:4px"><div style="font-weight:600;font-size:11px;color:#ffb380">⏳ '+escapeHtml(it.label)+'</div><div style="font-size:10px;opacity:0.6;font-family:monospace">'+escapeHtml(it.requestId.slice(0,18))+'… · '+ago+'</div><div style="font-size:10px;color:#7cc4ff;margin-top:2px">click to fetch</div></div>';
-  }).join("");
-  $$(".artifact[data-rid]", pendingEl).forEach(el => el.addEventListener("click", () => fetchPending(el.dataset.rid)));
+  const banner = document.getElementById('pendingBanner');
+  const drawer = document.getElementById('pendingDrawer');
+  const countEl = document.getElementById('pendingBannerCount');
+  const detailEl = document.getElementById('pendingBannerDetail');
+  if (!items.length) {
+    if (banner) banner.style.display = 'none';
+    if (drawer) drawer.style.display = 'none';
+    if (pendingEl) pendingEl.innerHTML = '';
+    return;
+  }
+  if (banner) banner.style.display = 'flex';
+  if (countEl) countEl.textContent = items.length === 1 ? '1 render in flight' : items.length + ' renders in flight';
+  if (detailEl) {
+    const oldest = items[items.length - 1];
+    detailEl.textContent = '· oldest: ' + fmtAgo(oldest.submittedAt) + ' · click any to fetch';
+  }
+  if (pendingEl) {
+    pendingEl.innerHTML = items.map(it => {
+      const ago = fmtAgo(it.submittedAt);
+      return '<div class="artifact pending-item" data-rid="'+escapeHtml(it.requestId)+'" style="padding:10px 14px;cursor:pointer;background:rgba(255,107,53,0.1);border:1px solid rgba(255,107,53,0.4);border-radius:6px;display:flex;justify-content:space-between;align-items:center;color:#fff;font-family:\'IBM Plex Mono\',monospace"><div><div style="font-weight:600;font-size:13px;color:#ffb380">⏳ '+escapeHtml(it.label)+'</div><div style="font-size:11px;opacity:0.6;margin-top:2px">'+escapeHtml(it.requestId.slice(0,24))+'… · '+ago+'</div></div><div style="background:#7cc4ff;color:#000;padding:6px 12px;border-radius:4px;font-size:11px;font-weight:600">FETCH</div></div>';
+    }).join('');
+    $$('.pending-item', pendingEl).forEach(el => el.addEventListener('click', (e) => { e.stopPropagation(); fetchPending(el.dataset.rid); }));
+  }
 }
 async function fetchPending(rid){
   // Synthesize an EXEC: cinematic_video_poll call to retrieve the latest status
@@ -401,6 +427,15 @@ async function fetchPending(rid){
 setInterval(() => { if (loadPending().length) renderPending(); }, 5000);
 // Render on load
 setTimeout(renderPending, 100);
+// Banner click toggles the drawer
+setTimeout(() => {
+  const banner = document.getElementById('pendingBanner');
+  const drawer = document.getElementById('pendingDrawer');
+  const toggle = document.getElementById('pendingBannerToggle');
+  function toggleDrawer(e){ if (e) e.stopPropagation(); if (!drawer) return; drawer.style.display = (drawer.style.display === 'block') ? 'none' : 'block'; }
+  if (banner) banner.addEventListener('click', toggleDrawer);
+  if (toggle) toggle.addEventListener('click', toggleDrawer);
+}, 200);
 
 // Active-tool tracking
 function setActiveTool(name){
