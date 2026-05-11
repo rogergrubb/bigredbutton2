@@ -320,6 +320,20 @@
 </style>
 </head>
 <body>
+
+<!-- Persistent progress banner (v0.40) — shows step counter + active tool, halo pulse while running, green PROJECT COMPLETE when done -->
+<div id="progressBanner" style="display:none;position:sticky;top:0;left:0;right:0;width:100%;z-index:9997;padding:14px 24px;background:linear-gradient(90deg,#ff6b35 0%,#ff3b3b 100%);color:#fff;font-family:'IBM Plex Mono',ui-monospace,monospace;border-bottom:2px solid #ffd93d;box-shadow:0 4px 32px rgba(255,217,61,0.35);animation:progressBannerPulse 1.6s ease-in-out infinite">
+  <div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:10px;font-weight:800;font-size:14px;letter-spacing:.04em">
+      <span id="progressIcon" style="font-size:18px">⚙️</span>
+      <span id="progressStep">STEP — OF —</span>
+    </div>
+    <div style="flex:1;min-width:240px">
+      <div id="progressTool" style="font-size:13px;font-weight:600;opacity:0.95;line-height:1.35">Initializing…</div>
+      <div style="margin-top:6px;height:5px;background:rgba(0,0,0,0.28);border-radius:3px;overflow:hidden">
+        <div id="progressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#ffd93d 0%,#ffeb6e 100%);transition:width 0.6s ease;box-shadow:0 0 12px rgba(255,217,61,0.7)"></div>
+      </div>
+
 <div id="pendingBanner" style="display:none;position:sticky;top:0;left:0;right:0;z-index:9999;background:linear-gradient(90deg,#ff6b35 0%,#ff3b3b 100%);color:white;padding:14px 24px;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:14px;font-weight:600;box-shadow:0 4px 24px rgba(255,107,53,0.4);cursor:pointer;align-items:center;gap:16px;justify-content:space-between">
   <div style="display:flex;align-items:center;gap:14px;flex:1">
     <span style="font-size:20px">🎬</span>
@@ -408,20 +422,9 @@
 
     <!-- CENTER: prompt + button + results -->
     
-<!-- Persistent progress banner (v0.40) — shows step counter + active tool, halo pulse while running, green PROJECT COMPLETE when done -->
-<div id="progressBanner" style="display:none;position:sticky;top:0;left:0;right:0;z-index:9997;padding:14px 24px;background:linear-gradient(90deg,#ff6b35 0%,#ff3b3b 100%);color:#fff;font-family:'IBM Plex Mono',ui-monospace,monospace;border-bottom:2px solid #ffd93d;box-shadow:0 4px 32px rgba(255,217,61,0.35);animation:progressBannerPulse 1.6s ease-in-out infinite">
-  <div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
-    <div style="display:flex;align-items:center;gap:10px;font-weight:800;font-size:14px;letter-spacing:.04em">
-      <span id="progressIcon" style="font-size:18px">⚙️</span>
-      <span id="progressStep">STEP — OF —</span>
-    </div>
-    <div style="flex:1;min-width:240px">
-      <div id="progressTool" style="font-size:13px;font-weight:600;opacity:0.95;line-height:1.35">Initializing…</div>
-      <div style="margin-top:6px;height:5px;background:rgba(0,0,0,0.28);border-radius:3px;overflow:hidden">
-        <div id="progressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#ffd93d 0%,#ffeb6e 100%);transition:width 0.6s ease;box-shadow:0 0 12px rgba(255,217,61,0.7)"></div>
-      </div>
-    </div>
+</div>
     <div id="progressElapsed" style="font-size:12px;font-weight:700;opacity:0.85;letter-spacing:.06em;min-width:60px;text-align:right">0s</div>
+    <button id="progressDismiss" onclick="document.getElementById('progressBanner').style.display='none'" style="background:rgba(0,0,0,0.25);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center;line-height:1;transition:background 0.15s" onmouseover="this.style.background='rgba(0,0,0,0.5)'" onmouseout="this.style.background='rgba(0,0,0,0.25)'" title="Dismiss">✕</button>
   </div>
 </div>
 
