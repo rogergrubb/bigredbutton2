@@ -17,8 +17,9 @@ The Big Red Button watches what a solo founder is building, detects the traction
 <https://github.com/rogergrubb/bigredbutton2> (public)
 
 ## Demo video
-2–3 minute hackathon film embedded at the URL above.
-Backup: `demo.mp4` in the repo root (earlier 60-second cut from the v18 build).
+113-second hackathon film embedded at the URL above. Opens with a cloned-voice welcome to the Runway judges, then walks the full story.
+Direct link: <https://bigredbutton.app/film_v22.mp4>
+Backup: `demo.mp4` in the repo root (earlier 60-second cut).
 
 ## Description (paste verbatim)
 
@@ -26,7 +27,7 @@ Solo founders don't need more ideas. They need to know what's already working �
 
 The Big Red Button is an autonomous launch agent for solo founders. It watches what you're building, detects the traction signal, then uses Runway's API to generate the brand, video assets, narration, multilingual variants, Shorts, thumbnails, and publishing plan needed to turn that signal into a real media product. We call it autonomous momentum capture.
 
-**The submission demo is real.** On May 8, 2026, a faceless guided-meditation YouTube channel I'd made for myself — *The Council of Fifty* — started growing. 175 views in 48 hours. 9,240 impressions. 9.1 hours of watch time. **83.4% of views from "Suggested videos."** 32.2% retention on the welcome video. Two subscribers. No marketing. The algorithm noticed before I did.
+**The submission demo is real.** On **May 5, 2026** I launched a faceless guided-meditation YouTube channel — *The Council of Fifty*. Six days later, YouTube Studio shows **242 views, 11.8 hours of watch time, +2 subscribers, 83.4% of views from "Suggested videos"** (YouTube itself recommending it), 32.2% retention on the welcome video. Zero marketing. Zero thumbnail optimization. The algorithm caught a brand-new channel on day one and kept feeding it. The YT Studio screenshot is rendered live on the submission page as an HTML/SVG recreation.
 
 So I pressed the Big Red Button. The agent read the signal, extracted the winning pattern from top sleep channels, built the positioning, authored the protocol architecture, and shipped *Sleep Technology Super Channel* — *"Engineered sleep for overactive minds."* PROTOCOL 001: Brown Noise Black Screen — 10 hours, deep sleep, sleep technology — is live now. PROTOCOL 002 (7-Minute Mental Shutdown + Rain) ships next. Each protocol = one button press. Each protocol uses the full Runway API surface end-to-end.
 

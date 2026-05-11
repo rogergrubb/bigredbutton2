@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>For the Judges — Big Red Button · Runway 2026 API Hackathon</title>
+<meta name="description" content="Everything the Runway 2026 API Hackathon judges need to evaluate The Big Red Button in one scroll." />
+<meta property="og:title" content="For the Judges — Big Red Button" />
+<meta property="og:description" content="Live demo, hackathon film, GitHub, the real YouTube receipt that triggered the build." />
+<style>
+  :root{--bg:#0a0a0a;--panel:#11161e;--panel-2:#0d1119;--line:#1f2733;--ink:#e8eef6;--muted:#8893a5;--red:#ff5959;--ok:#7ce4a3;--accent:#ffd93d;--blue:#5fa8e6}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,Inter,Segoe UI,Roboto,sans-serif;line-height:1.55}
+  a{color:var(--blue);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:980px;margin:0 auto;padding:32px 24px 80px}
+  header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;flex-wrap:wrap;gap:12px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+  .brand{font-weight:800;font-size:16px;letter-spacing:.01em}
+  .brand b{color:var(--red)}
+  nav a{color:var(--muted);font-size:13px;margin-left:18px}
+  nav a:hover{color:#fff;text-decoration:none}
+  h1{font-size:clamp(34px,5vw,52px);line-height:1.05;letter-spacing:-.02em;margin:0 0 12px;font-weight:900}
+  h1 .red{color:var(--red)} h1 .ok{color:var(--ok)}
+  .lede{color:var(--muted);max-width:780px;margin:0 0 32px;font-size:16px;line-height:1.6}
+
+  .quick-links{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:24px 0 40px}
+  @media (max-width:680px){.quick-links{grid-template-columns:1fr}}
+  .ql{display:flex;align-items:center;gap:14px;padding:18px 20px;background:var(--panel);border:1px solid var(--line);border-radius:12px;transition:border-color .15s,transform .12s}
+  .ql:hover{border-color:var(--accent);transform:translateY(-2px);text-decoration:none}
+  .ql .icon{font-size:24px;flex-shrink:0}
+  .ql .label{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:2px}
+  .ql .name{color:#fff;font-weight:700;font-size:15px}
+  .ql .desc{color:var(--muted);font-size:12px;margin-top:2px}
+
+  section.block{margin-top:48px;padding-top:32px;border-top:1px solid var(--line)}
+  section.block:first-of-type{border-top:0;padding-top:0}
+  section.block .kicker{color:var(--accent);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;margin-bottom:10px;font-weight:700;font-family:'IBM Plex Mono',ui-monospace,monospace}
+  section.block h2{font-size:clamp(24px,3vw,34px);font-weight:800;letter-spacing:-.4px;margin:0 0 14px}
+  section.block p{color:var(--ink);font-size:15.5px;line-height:1.65;margin:0 0 14px}
+  section.block p.muted{color:var(--muted);font-size:14px}
+
+  .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0}
+  @media (max-width:680px){.stat-grid{grid-template-columns:1fr 1fr}}
+  .stat{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+  .stat .num{font-size:28px;font-weight:800;color:var(--ok);letter-spacing:-.02em}
+  .stat .desc{color:var(--muted);font-size:12px;margin-top:2px;font-family:'IBM Plex Mono',ui-monospace,monospace}
+
+  .endpoint-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+  @media (max-width:680px){.endpoint-grid{grid-template-columns:1fr}}
+  .ep{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px}
+  .ep .tag{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:var(--blue);background:#0a1420;border:1px solid #1d2a3a;padding:3px 7px;border-radius:4px;flex-shrink:0;letter-spacing:.04em}
+  .ep .text{flex:1}
+  .ep .text strong{display:block;color:#fff;font-size:13.5px;font-weight:700;margin-bottom:2px}
+  .ep .text span{color:var(--muted);font-size:12.5px;line-height:1.4}
+
+  .pipeline{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;margin:18px 0;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;line-height:1.7;color:var(--ink);overflow-x:auto;white-space:pre}
+  .pipeline .arrow{color:var(--accent)}
+  .pipeline .tool{color:var(--blue)}
+  .pipeline .timing{color:var(--muted);font-size:11.5px}
+
+  .receipt{background:#fff;color:#0f0f0f;border-radius:12px;padding:22px;margin:18px 0;font-family:-apple-system,BlinkMacSystemFont,Roboto,sans-serif;border:1px solid #e5e5e5}
+  .receipt .yt-bar{display:flex;align-items:center;gap:10px;padding-bottom:14px;border-bottom:1px solid #e5e5e5;margin-bottom:14px}
+  .receipt .yt-logo{width:30px;height:21px;background:#ff0000;border-radius:5px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px}
+  .receipt .yt-name{font-weight:700;font-size:17px;color:#0f0f0f}
+  .receipt .head{font-size:18px;font-weight:600;color:#0f0f0f;margin-bottom:14px}
+  .receipt .metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1px solid #e5e5e5;border-radius:8px;overflow:hidden}
+  .receipt .m{padding:14px 16px;background:#fff;border-right:1px solid #e5e5e5}
+  .receipt .m:nth-child(2){background:#f9f9f9}
+  .receipt .m:last-child{border-right:0}
+  .receipt .m .l{font-size:12px;color:#606060;margin-bottom:6px}
+  .receipt .m .n{font-size:26px;color:#0f0f0f}
+
+  .callout{margin:24px 0;padding:18px 22px;background:linear-gradient(180deg,rgba(255,217,61,0.08),rgba(255,217,61,0.02));border-left:3px solid var(--accent);border-radius:6px;color:#fff5c2}
+  .callout strong{color:var(--accent)}
+
+  footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="brand">▣ THE <b>BIG RED</b> BUTTON</div>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/app">Live agent</a>
+    <a href="/showcase">Showcase</a>
+    <a href="/manifesto">Manifesto</a>
+  </nav>
+</header>
+
+<div class="kicker" style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11.5px;color:#ffd93d;letter-spacing:.16em;text-transform:uppercase;font-weight:700;margin-bottom:10px">▮ Runway 2026 API Hackathon · For the Judges</div>
+
+<h1>One push. <span class="red">One YouTube channel.</span> <span class="ok">Live.</span></h1>
+
+<p class="lede">The Big Red Button is an autonomous launch agent for solo founders. It watches what you're building, detects the traction signal the algorithm is rewarding, and uses the Runway API end-to-end to ship a complete media product in response. This page is everything you need to evaluate it, in one scroll.</p>
+
+<div class="quick-links">
+  <a class="ql" href="https://bigredbutton.app/" target="_blank">
+    <div class="icon">▶</div>
+    <div><div class="label">Live demo</div><div class="name">bigredbutton.app</div><div class="desc">Hero film opens with a welcome to you</div></div>
+  </a>
+  <a class="ql" href="https://bigredbutton.app/app" target="_blank">
+    <div class="icon">⚙</div>
+    <div><div class="label">The agent itself</div><div class="name">bigredbutton.app/app</div><div class="desc">Press the red button — one push, finished product</div></div>
+  </a>
+  <a class="ql" href="https://bigredbutton.app/film_v22.mp4" target="_blank">
+    <div class="icon">🎬</div>
+    <div><div class="label">Hackathon film (1m53s)</div><div class="name">film_v22.mp4</div><div class="desc">Direct MP4 link — opens in any player</div></div>
+  </a>
+  <a class="ql" href="https://github.com/rogergrubb/bigredbutton2" target="_blank">
+    <div class="icon">⌬</div>
+    <div><div class="label">Source — public repo</div><div class="name">github.com/rogergrubb/bigredbutton2</div><div class="desc">Vercel Edge agent + ElevenLabs + Runway</div></div>
+  </a>
+  <a class="ql" href="https://www.youtube.com/@TheCouncilOfFifty" target="_blank">
+    <div class="icon">▮</div>
+    <div><div class="label">Wave 1 — the signal</div><div class="name">@TheCouncilOfFifty</div><div class="desc">Faceless meditations · the channel that hockey-sticked</div></div>
+  </a>
+  <a class="ql" href="https://www.youtube.com/@SleepTechSuperChannel" target="_blank">
+    <div class="icon">▮</div>
+    <div><div class="label">Wave 2 — what the agent shipped</div><div class="name">@SleepTechSuperChannel</div><div class="desc">"Engineered sleep for overactive minds"</div></div>
+  </a>
+</div>
+
+<section class="block">
+  <div class="kicker">The signal that triggered it</div>
+  <h2>A faceless sleep channel I built on May 5 went hockey-stick on day one.</h2>
+  <p>Brand new channel. Six days old. The numbers below are this morning's actual YouTube Studio numbers — not a simulation.</p>
+
+  <div class="receipt">
+    <div class="yt-bar"><div class="yt-logo">▶</div><div class="yt-name">Studio</div></div>
+    <div class="head">Your channel got 242 views in the last 28 days</div>
+    <div class="metrics">
+      <div class="m"><div class="l">Views</div><div class="n">242</div></div>
+      <div class="m"><div class="l">Watch time (hours)</div><div class="n">11.8</div></div>
+      <div class="m"><div class="l">Subscribers</div><div class="n">+2</div></div>
+    </div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat"><div class="num">242</div><div class="desc">VIEWS (6 DAYS)</div></div>
+    <div class="stat"><div class="num">11.8h</div><div class="desc">WATCH TIME</div></div>
+    <div class="stat"><div class="num">+2</div><div class="desc">SUBSCRIBERS</div></div>
+    <div class="stat"><div class="num">83.4%</div><div class="desc">FROM "SUGGESTED"</div></div>
+    <div class="stat"><div class="num">32.2%</div><div class="desc">TOP-VIDEO RETENTION</div></div>
+    <div class="stat"><div class="num">May 5</div><div class="desc">CHANNEL LAUNCH</div></div>
+  </div>
+
+  <p class="muted">83.4% of views came from <em>Suggested videos</em>, which means YouTube itself is recommending the content. No marketing, no thumbnail optimization, no promotion. The algorithm caught a brand-new channel on day one and kept feeding it. That is exactly the signal The Big Red Button was built to capture.</p>
+</section>
+
+<section class="block">
+  <div class="kicker">What pressing the button does</div>
+  <h2>One push → still + narration + composed sleep widget. In ~15 seconds. End to end.</h2>
+  <p>Atomic pipeline. No queue. No "pending" hand-off. The user presses one button, and a finished playable artifact comes back.</p>
+
+<div class="pipeline">  <span class="tool">generate_image</span>          <span class="arrow">→</span>   <span class="tool">speak</span>(pace:"sleep")      <span class="arrow">→</span>   <span class="tool">compose_sleep_video</span>
+  <span class="timing">~10s — Runway gen4_image       ~3s — ElevenLabs slow path     instant — CSS Ken Burns</span>
+  <span class="timing">cinematic vertical sleep still   SSML breath pauses + speed 0.80   stitches image + audio</span>
+  <span class="timing">                                 Rachel voice forced                synced 30s playback widget</span></div>
+
+  <div class="callout"><strong>Why no Runway video render in the sleep path?</strong> Because the user pressed one button. Adding a 60–90s gen4.5 render breaks the atomic guarantee. We use CSS Ken Burns motion on the still under the narration — a drifting, dreamy sleep visual without any video synthesis. The full Runway video stack is still used elsewhere in the agent (cinematic shorts, character dialogue, atmospheric grading) — just not on the critical-path sleep pipeline that has to finish in one Edge call.</p></div>
+</section>
+
+<section class="block">
+  <div class="kicker">The Runway capability stack</div>
+  <h2>The agent orchestrates the entire Runway API surface.</h2>
+  <p>Not one endpoint. Not three. Every protocol video in the demo channel touches multiple endpoints — chained, polled, and assembled through the tasks API.</p>
+
+  <div class="endpoint-grid">
+    <div class="ep"><span class="tag">gen4_image</span><div class="text"><strong>Cinematic stills</strong><span>Sleep-world hero stills, thumbnail concepts, banner art</span></div></div>
+    <div class="ep"><span class="tag">gen4_image_turbo</span><div class="text"><strong>Reference-guided iteration</strong><span>Refine a still while keeping subject consistency</span></div></div>
+    <div class="ep"><span class="tag">gen4.5</span><div class="text"><strong>Image → motion</strong><span>Slow ethereal drift over each protocol's hero still</span></div></div>
+    <div class="ep"><span class="tag">gen4_aleph</span><div class="text"><strong>Atmospheric grade</strong><span>Transform raw footage into premium sleep-lab visuals</span></div></div>
+    <div class="ep"><span class="tag">gen3a_turbo</span><div class="text"><strong>Start+end frame motion</strong><span>Impossible cinematic transitions between two key frames</span></div></div>
+    <div class="ep"><span class="tag">avatars.create</span><div class="text"><strong>Mini-Me persistent twin</strong><span>The agent has a face — reusable across every output</span></div></div>
+    <div class="ep"><span class="tag">gwm1_avatars</span><div class="text"><strong>Lip-synced talking head</strong><span>Cloned-voice narration drives a custom Mini-Me avatar</span></div></div>
+    <div class="ep"><span class="tag">tasks API</span><div class="text"><strong>Orchestration backbone</strong><span>Submit → poll → retrieve. Every chained run rides this</span></div></div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="kicker">The architecture</div>
+  <h2>Solo dev. Edge runtime. Streamed agent loop. No background workers.</h2>
+  <p>Single-file Edge function (<code>api/agent.js</code>, ~72KB) that runs an Anthropic tool-use loop with full SSE streaming back to the browser. Server-side defenses learned the hard way:</p>
+  <ul style="color:var(--ink);font-size:14.5px;line-height:1.7;padding-left:22px">
+    <li><strong>Verbatim-script rule</strong> — if the user's prompt contains quoted narrator text, the agent passes it verbatim to <code>speak</code> rather than inventing its own monologue.</li>
+    <li><strong>Server-side sleep-pace auto-detect</strong> — 24 cadence cues ("close your eyes", "drift", "breathe", "whisper", etc.) auto-promote <code>pace</code> to "sleep" if the model forgets. Belt and suspenders.</li>
+    <li><strong>Atomic pipeline guarantee</strong> — sleep videos use generate_image → speak → compose_sleep_video. No <code>animate_image</code> call to risk blowing the Edge budget.</li>
+    <li><strong>One-push hard rule</strong> — agent treats the whole pipeline as a single transaction. No queue, no pending hand-off.</li>
+  </ul>
+  <p class="muted">Built by one founder (Roger Grubb · Number One Son Software Development LLC) using Claude as a co-CTO. Tech stack: Vercel Edge + Claude API tool-use + Runway API + ElevenLabs API. No backend servers, no databases — the agent IS the product.</p>
+</section>
+
+<section class="block">
+  <div class="kicker">Press the button yourself</div>
+  <h2>Try it. Audio plays the welcome to you first.</h2>
+  <p>Open <a href="https://bigredbutton.app/" target="_blank">bigredbutton.app</a>, click anywhere on the page to start the audio (Chrome autoplay policy), and watch a cloned-voice welcome address you directly. The page then auto-scrolls section by section as the narrator hits each beat. When the narration reaches "they need a button," the CTA reveals — type or prefill a prompt, press the red button, and a finished sleep video composes in ~15 seconds.</p>
+  <p style="text-align:center;margin-top:24px"><a href="https://bigredbutton.app/" target="_blank" style="display:inline-block;background:var(--red);color:#fff;padding:14px 32px;border-radius:10px;font-weight:800;font-size:15px;letter-spacing:.04em;text-decoration:none;box-shadow:0 10px 30px rgba(255,89,89,.4)">▶ Open bigredbutton.app</a></p>
+</section>
+
+<footer>
+  <div>The Big Red Button · Number One Son Software Development LLC · Runway 2026 API Hackathon</div>
+  <div><a href="mailto:roger@grubb.net">roger@grubb.net</a></div>
+</footer>
+
+</div>
+</body>
+</html>
