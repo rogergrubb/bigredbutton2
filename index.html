@@ -339,32 +339,48 @@
         lbl.textContent = 'mute';
       }
     }
-    // Try autoplay WITH sound first. Some browsers/users have enough Media Engagement
-    // score (returning visitors, or non-incognito with prior interactions on this domain)
-    // that sound is allowed on autoplay. If the promise rejects → fall back to muted +
-    // wait for any user gesture to unmute. This gives Roger automatic sound where the
-    // browser permits it, and a one-click unmute everywhere else.
-    film.muted = false;
-    const pSound = film.play();
-    if (pSound && pSound.then) {
-      pSound.then(() => {
+    // === AUTOPLAY STRATEGY ===
+    // Try sound-first. If Chrome's autoplay policy rejects (low MEI / incognito /
+    // background tab), fall back to muted playback + wait for ANY real user gesture
+    // to unmute. On unmute we RESTART the video from time 0 so the user always hears
+    // the welcome from the beginning regardless of when they click.
+    let __soundUnlocked = false;
+    function tryAutoplayWithSound(){
+      film.muted = false;
+      const pSound = film.play();
+      if (pSound && pSound.then) {
+        pSound.then(() => {
+          __soundUnlocked = true;
+          setBtnState();
+        }).catch(() => {
+          // Browser refused autoplay-with-sound. Fall back to muted playback.
+          film.muted = true;
+          film.play().catch(()=>{});
+          setBtnState();
+        });
+      } else {
         setBtnState();
-      }).catch(() => {
-        film.muted = true;
-        film.play().catch(()=>{});
-        setBtnState();
-      });
-    } else {
-      setBtnState();
+      }
     }
+    tryAutoplayWithSound();
 
     function tryUnmute(){
-      if (!film.muted) return;
+      if (!film.muted && __soundUnlocked) return; // already on
+      __soundUnlocked = true;
       film.muted = false;
+      film.currentTime = 0;          // restart from start so welcome plays in full
       const pr = film.play();
       if (pr && pr.catch) pr.catch(() => { film.muted = true; setBtnState(); });
       setBtnState();
     }
+
+    // Background-tab recovery: when the page becomes visible, if we're still muted
+    // and the video is paused (browser suspended autoplay), try again.
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && film.paused && !__soundUnlocked) {
+        tryAutoplayWithSound();
+      }
+    });
     // Real user gestures only — these count for the autoplay policy.
     // mousemove / wheel / scroll DO NOT, and they get consumed by our auto-scroll feature,
     // which would silently burn the {once:true} listeners before a real click ever lands.
@@ -387,15 +403,16 @@
     // Timestamps map to film_v19 VOICEOVER.txt segments.
     // If the user manually scrolls, we disable auto-scroll for the rest of playback (respectful UX).
     const SCROLL_MARKS = [
-      // Film is 114s: 24s welcome-judges prepend + 90s film_v19. Natural silence breaks inside
-      // film_v19 are at +25.6 / +38.8 / +78.3 — in new film: 49.6 / 62.8 / 102.3.
-      { t: 49,  id: 'signal'     }, // narrator: "...a faceless sleep channel I made for myself started growing"
-      { t: 62,  id: 'io-snap'    }, // input/output snap — guided/black-screen/cinematic tradeoffs
-      { t: 75,  id: 'arc'        }, // "...one unexpected signal becomes a complete content engine"
-      { t: 88,  id: 'capability' }, // "Then it calls Runway. The secret sauce."
-      { t: 96,  id: 'demo'       }, // "Sleep Technology Super Channel"
-      { t: 103, id: 'thesis'     }, // closing thesis (right after final silence break at 102.3)
-      { t: 112, id: 'pressnow'   }, // final 2s — reveal CTA so it's ready when narration ends
+      // Film is 113s: 23s welcome-judges prepend (2s silence + 21s welcome) + 90s film_v19.
+      // Natural silence breaks inside film_v19 are at +25.6 / +38.8 / +78.3 — in the
+      // composed film: 48.6 / 61.8 / 101.3.
+      { t: 48,  id: 'signal'     }, // narrator: "...a faceless sleep channel I made for myself started growing"
+      { t: 61,  id: 'io-snap'    }, // input/output snap — guided/black-screen/cinematic tradeoffs
+      { t: 74,  id: 'arc'        }, // "...one unexpected signal becomes a complete content engine"
+      { t: 87,  id: 'capability' }, // "Then it calls Runway. The secret sauce."
+      { t: 95,  id: 'demo'       }, // "Sleep Technology Super Channel"
+      { t: 102, id: 'thesis'     }, // closing thesis (right after final silence break at 101.3)
+      { t: 111, id: 'pressnow'   }, // final 2s — reveal CTA so it's ready when narration ends
     ];
     let lastFiredIdx = -1;
     let autoScrollEnabled = true;
