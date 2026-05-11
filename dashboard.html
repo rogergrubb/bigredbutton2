@@ -138,7 +138,8 @@
   .sub-stat { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
   .sub-stat .hi { color: #fff; font-weight: 600; }
 
-  .spark { width: 100%; height: 38px; margin-top: 8px; }
+  .spark-wrap { width: 100%; height: 40px; margin-top: 10px; position: relative; }
+  .spark-wrap canvas { position: absolute !important; inset: 0; width: 100% !important; height: 40px !important; }
 
   /* ====== North Star — $1B trajectory hero ====== */
   .north-star {
@@ -312,25 +313,25 @@
     <div class="head"><span class="title">MRR</span><span class="delta up" id="mrrDelta">+18.2%</span></div>
     <div class="kpi mono" id="mrrVal">$24,180</div>
     <div class="sub-stat">vs <span class="hi">$20,460</span> last month · trending up</div>
-    <canvas class="spark" id="mrrSpark"></canvas>
+    <div class="spark-wrap"><canvas id="mrrSpark"></canvas></div>
   </div>
   <div class="card">
     <div class="head"><span class="title">ARR Projection</span><span class="delta up">+218%</span></div>
     <div class="kpi mono" id="arrVal">$290.2K</div>
     <div class="sub-stat">12-mo run rate · <span class="hi">net of churn</span></div>
-    <canvas class="spark" id="arrSpark"></canvas>
+    <div class="spark-wrap"><canvas id="arrSpark"></canvas></div>
   </div>
   <div class="card">
     <div class="head"><span class="title">Cash Runway</span><span class="delta flat">stable</span></div>
     <div class="kpi mono">∞<span class="unit">months</span></div>
     <div class="sub-stat">solo · zero burn · default alive</div>
-    <canvas class="spark" id="runSpark"></canvas>
+    <div class="spark-wrap"><canvas id="runSpark"></canvas></div>
   </div>
   <div class="card">
     <div class="head"><span class="title">Burn Multiple</span><span class="delta up">elite</span></div>
     <div class="kpi mono">0.0×</div>
     <div class="sub-stat">Bessemer benchmark: <span class="hi">&lt;1× = elite</span></div>
-    <canvas class="spark" id="burnSpark"></canvas>
+    <div class="spark-wrap"><canvas id="burnSpark"></canvas></div>
   </div>
 </div>
 
@@ -403,19 +404,19 @@
     <div class="head"><span class="title">LTV : CAC Ratio</span><span class="delta up">+0.4×</span></div>
     <div class="kpi mono">5.8×</div>
     <div class="sub-stat">CAC payback in <span class="hi">2.1 mo</span> · industry benchmark 3:1</div>
-    <canvas class="spark" id="ltvSpark"></canvas>
+    <div class="spark-wrap"><canvas id="ltvSpark"></canvas></div>
   </div>
   <div class="card">
     <div class="head"><span class="title">Magic Number</span><span class="delta up">strong</span></div>
     <div class="kpi mono">1.4</div>
     <div class="sub-stat">net new ARR per $1 sales spend · <span class="hi">&gt;1.0 = double down</span></div>
-    <canvas class="spark" id="magicSpark"></canvas>
+    <div class="spark-wrap"><canvas id="magicSpark"></canvas></div>
   </div>
   <div class="card">
     <div class="head"><span class="title">Net Dollar Retention</span><span class="delta up">+4 pp</span></div>
     <div class="kpi mono">128<span class="unit">%</span></div>
     <div class="sub-stat">expansion > churn · <span class="hi">negative churn</span> achieved</div>
-    <canvas class="spark" id="ndrSpark"></canvas>
+    <div class="spark-wrap"><canvas id="ndrSpark"></canvas></div>
   </div>
 </div>
 
@@ -430,19 +431,19 @@
     <div class="head"><span class="title">DAU / WAU / MAU</span><span class="delta up">DAU/MAU 38%</span></div>
     <div class="kpi mono" id="dauVal">412</div>
     <div class="sub-stat">DAU · WAU <span class="hi">1,420</span> · MAU <span class="hi">3,847</span></div>
-    <canvas class="spark" id="dauSpark"></canvas>
+    <div class="spark-wrap"><canvas id="dauSpark"></canvas></div>
   </div>
   <div class="card">
     <div class="head"><span class="title">K-Factor (viral)</span><span class="delta up">organic engine</span></div>
     <div class="kpi mono">1.18</div>
     <div class="sub-stat">each user invites <span class="hi">1.18</span> new users · &gt;1.0 = self-sustaining</div>
-    <canvas class="spark" id="kSpark"></canvas>
+    <div class="spark-wrap"><canvas id="kSpark"></canvas></div>
   </div>
   <div class="card">
     <div class="head"><span class="title">CAC Payback</span><span class="delta up">fast</span></div>
     <div class="kpi mono">2.1<span class="unit">mo</span></div>
     <div class="sub-stat">payback in <span class="hi">63 days</span> · industry 12+ months</div>
-    <canvas class="spark" id="cacSpark"></canvas>
+    <div class="spark-wrap"><canvas id="cacSpark"></canvas></div>
   </div>
   <div class="card">
     <div class="head"><span class="title">Channel Attribution</span><span class="delta flat">last 30d</span></div>
@@ -496,7 +497,7 @@
     <div class="head"><span class="title">Pipeline runs · today</span><span class="delta up">+12 vs yesterday</span></div>
     <div class="kpi mono" id="runsToday">38</div>
     <div class="sub-stat">avg time-to-finish <span class="hi">14.6s</span> · success rate <span class="hi">97.4%</span></div>
-    <canvas class="spark" id="runsSpark"></canvas>
+    <div class="spark-wrap"><canvas id="runsSpark"></canvas></div>
   </div>
   <div class="card" style="grid-column: span 4">
     <div class="head"><span class="title">Runway endpoint mix</span><span class="delta flat">7-day</span></div>
@@ -590,25 +591,25 @@
     <div class="head"><span class="title">Total API spend · YTD</span><span class="delta down">tiny</span></div>
     <div class="kpi mono" id="apiSpend">$118.42</div>
     <div class="sub-stat">Runway + ElevenLabs + Anthropic combined</div>
-    <canvas class="spark" id="apiSpark"></canvas>
+    <div class="spark-wrap"><canvas id="apiSpark"></canvas></div>
   </div>
   <div class="card">
     <div class="head"><span class="title">Cost per Runway minute</span><span class="delta flat">stable</span></div>
     <div class="kpi mono">$0.18</div>
     <div class="sub-stat">across gen4_image · gen4_turbo · gen4.5</div>
-    <canvas class="spark" id="runwaySpark"></canvas>
+    <div class="spark-wrap"><canvas id="runwaySpark"></canvas></div>
   </div>
   <div class="card">
     <div class="head"><span class="title">Cost per ElevenLabs sec</span><span class="delta flat">stable</span></div>
     <div class="kpi mono">$0.0008</div>
     <div class="sub-stat">multilingual v2 · cloned voice · sleep pace</div>
-    <canvas class="spark" id="elevenSpark"></canvas>
+    <div class="spark-wrap"><canvas id="elevenSpark"></canvas></div>
   </div>
   <div class="card">
     <div class="head"><span class="title">Vercel invocations · 24h</span><span class="delta up">healthy</span></div>
     <div class="kpi mono" id="vercelHits">2,148</div>
     <div class="sub-stat">avg <span class="hi">8.2s</span> per Edge fn · zero cold starts</div>
-    <canvas class="spark" id="vercelSpark"></canvas>
+    <div class="spark-wrap"><canvas id="vercelSpark"></canvas></div>
   </div>
 </div>
 
