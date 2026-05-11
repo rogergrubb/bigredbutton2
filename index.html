@@ -339,18 +339,28 @@
         lbl.textContent = 'mute';
       }
     }
-    // ALWAYS start muted. Chrome autoplay policy refuses sound on first visit (esp. incognito) —
-    // no JS trick changes that. Setting muted=true makes autoplay reliable. Then the FIRST real
-    // user gesture (click / key / touch — NOT mousemove or scroll, which don't count for the
-    // policy AND get fired by our own auto-scroll feature) flips audio on.
-    film.muted = true;
-    film.play().catch(()=>{});
-    setBtnState();
+    // Try autoplay WITH sound first. Some browsers/users have enough Media Engagement
+    // score (returning visitors, or non-incognito with prior interactions on this domain)
+    // that sound is allowed on autoplay. If the promise rejects → fall back to muted +
+    // wait for any user gesture to unmute. This gives Roger automatic sound where the
+    // browser permits it, and a one-click unmute everywhere else.
+    film.muted = false;
+    const pSound = film.play();
+    if (pSound && pSound.then) {
+      pSound.then(() => {
+        setBtnState();
+      }).catch(() => {
+        film.muted = true;
+        film.play().catch(()=>{});
+        setBtnState();
+      });
+    } else {
+      setBtnState();
+    }
 
     function tryUnmute(){
       if (!film.muted) return;
       film.muted = false;
-      // Some browsers need a fresh play() after unmute. Re-mute if the unmute play is rejected.
       const pr = film.play();
       if (pr && pr.catch) pr.catch(() => { film.muted = true; setBtnState(); });
       setBtnState();
