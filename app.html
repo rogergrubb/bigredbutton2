@@ -182,6 +182,8 @@
   }
   .translate-prompt button.no:hover { color: #fff; border-color: #555; }
 
+  /* Make scrollIntoView land BELOW the sticky banner stack (progress + pending) — was hiding new content behind them. */
+  html { scroll-padding-top: 110px; }
   @keyframes haloPulse {
     0%, 100% {
       box-shadow:
@@ -1114,9 +1116,9 @@ function handleEvent(event, payload){
     if (payload.requestId) addPending({ requestId: payload.requestId, label: payload.label, kind: payload.pendingKind });
     const node = renderResultBox(payload);
     results.appendChild(node);
-    // Auto-scroll to the BOTTOM of the page so user always sees the latest deliverable
+    // Auto-scroll to the new result. scroll-padding-top in <html> clears the sticky banners.
     requestAnimationFrame(() => {
-      node.scrollIntoView({behavior:"smooth", block:"end"});
+      node.scrollIntoView({behavior:"smooth", block:"start"});
       setTimeout(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }), 250);
     });
     addArtifact({ kind: payload.kind, label: payload.label, url: payload.url, html: payload.html, text: payload.text });
