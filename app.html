@@ -79,6 +79,84 @@
     cursor: pointer;
     position: relative;
   }
+  @keyframes statusActivePulse {
+    0%, 100% {
+      box-shadow:
+        0 0 0 0 rgba(255, 217, 61, 0.55),
+        0 0 18px 2px rgba(255, 217, 61, 0.35);
+      border-color: #ffd93d;
+    }
+    50% {
+      box-shadow:
+        0 0 0 10px rgba(255, 217, 61, 0),
+        0 0 28px 8px rgba(255, 217, 61, 0.55);
+      border-color: #ffe66d;
+    }
+  }
+  .stat.status-active {
+    background: linear-gradient(90deg, rgba(255,217,61,0.10) 0%, rgba(255,107,53,0.08) 100%) !important;
+    border: 1.5px solid #ffd93d !important;
+    animation: statusActivePulse 1.5s ease-in-out infinite;
+    transform: scale(1.015);
+    transition: transform .15s;
+  }
+  .stat.status-active .name { color: #fff3a0 !important; font-weight: 700; }
+  .stat.status-active .dot { background: #ffd93d !important; box-shadow: 0 0 8px #ffd93d; }
+
+  /* End-of-run summary card */
+  .run-summary {
+    margin: 24px 0;
+    padding: 24px;
+    background: linear-gradient(180deg, #11161e 0%, #0d1119 100%);
+    border: 2px solid #ffd93d;
+    border-radius: 14px;
+    box-shadow: 0 0 0 1px rgba(255,217,61,0.15), 0 30px 80px -20px rgba(255,217,61,0.25);
+  }
+  .run-summary h3 { margin: 0 0 8px; font-size: 20px; color: #ffd93d; letter-spacing: 0.02em; }
+  .run-summary .sub { color: #8893a5; font-size: 13px; margin-bottom: 18px; }
+  .run-summary .file-list { display: grid; gap: 8px; margin: 0 0 18px; }
+  .run-summary .file-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; background: #0a0d13; border: 1px solid #1f2733;
+    border-radius: 8px; font-family: 'IBM Plex Mono',ui-monospace,monospace; font-size: 12.5px;
+  }
+  .run-summary .file-item .kind {
+    color: #ffb86b; min-width: 105px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px;
+  }
+  .run-summary .file-item .label { color: #e8eef6; flex: 1; }
+  .run-summary .file-item .url-btn {
+    color: #7ce4a3; text-decoration: none; padding: 4px 10px; border: 1px solid #2a4a36; border-radius: 5px; font-size: 11px;
+    transition: background .15s;
+  }
+  .run-summary .file-item .url-btn:hover { background: #16241c; }
+
+  /* Translate prompt */
+  .translate-prompt {
+    margin-top: 20px; padding: 22px 24px;
+    background: linear-gradient(135deg, #1c1421 0%, #0f0a17 100%);
+    border: 2px solid #b388ff; border-radius: 14px;
+    text-align: center;
+    box-shadow: 0 30px 80px -20px rgba(179,136,255,0.25);
+  }
+  .translate-prompt h4 { margin: 0 0 6px; font-size: 17px; color: #c7b3ff; font-weight: 800; letter-spacing: 0.02em; }
+  .translate-prompt p { margin: 0 0 16px; color: #b8c2d4; font-size: 14px; line-height: 1.5; }
+  .translate-prompt .langs { color: #8893a5; font-size: 11.5px; font-family: 'IBM Plex Mono',ui-monospace,monospace; margin-bottom: 14px; }
+  .translate-prompt .btn-row { display: flex; gap: 12px; justify-content: center; }
+  .translate-prompt button {
+    padding: 12px 28px; font-weight: 800; font-size: 14px; letter-spacing: 0.04em;
+    border-radius: 10px; cursor: pointer; transition: transform .12s, box-shadow .15s;
+    font-family: -apple-system, BlinkMacSystemFont, Inter, sans-serif;
+  }
+  .translate-prompt button.yes {
+    background: linear-gradient(135deg, #b388ff 0%, #7c4dff 100%); color: #fff; border: none;
+    box-shadow: 0 8px 24px rgba(124,77,255,0.4);
+  }
+  .translate-prompt button.yes:hover { transform: scale(1.04); box-shadow: 0 12px 32px rgba(124,77,255,0.6); }
+  .translate-prompt button.no {
+    background: transparent; color: #8893a5; border: 1px solid #3a3a4a;
+  }
+  .translate-prompt button.no:hover { color: #fff; border-color: #555; }
+
   @keyframes haloPulse {
     0%, 100% {
       box-shadow:
@@ -606,6 +684,7 @@ function setActiveTool(name){
   activeToolEl.style.display = "block";
   activeToolNameEl.textContent = "⚙️ Running: " + name;
   activeToolElapsedEl.textContent = "(0s)";
+  markStatusActive(name);
   if (__activeToolTicker) clearInterval(__activeToolTicker);
   __activeToolTicker = setInterval(() => {
     if (__activeToolStart) activeToolElapsedEl.textContent = "(" + Math.floor((Date.now()-__activeToolStart)/1000) + "s)";
@@ -615,9 +694,111 @@ function clearActiveTool(){
   if (__activeToolTicker) { clearInterval(__activeToolTicker); __activeToolTicker = null; }
   __activeToolStart = null; __activeToolName = null;
   activeToolEl.style.display = "none";
+  clearStatusActive();
   // Clear text too so a future re-show doesn't flash stale content
   if (activeToolNameEl) activeToolNameEl.textContent = '';
   if (activeToolElapsedEl) activeToolElapsedEl.textContent = '';
+}
+
+// --- Status item pulse — light up the relevant STATUS row when its tool is running ---
+const TOOL_TO_STATUS = {
+  // reasoning
+  plan: "reasoning", lock_brief: "reasoning",
+  // search
+  web_search: "web-search", read_url: "web-search",
+  // image
+  generate_image: "image",
+  // motion / video
+  animate_image: "motion-video", scene_with_characters: "motion-video",
+  cinematic_video: "motion-video", cinematic_video_t2v: "motion-video",
+  cinematic_video_poll: "motion-video", poll_task: "motion-video",
+  // voice
+  speak: "voice", talking_head: "voice", lock_character: "voice", list_avatars: "voice",
+  // build / compose
+  write_html: "build-html", write_text: "build-html",
+  compose_sleep_video: "build-html",
+};
+function markStatusActive(toolName){
+  const key = TOOL_TO_STATUS[toolName];
+  if (!key) return;
+  // Clear any other actives first — one tool runs at a time
+  document.querySelectorAll('.stat.status-active').forEach(n => n.classList.remove('status-active'));
+  const row = document.querySelector('.stat[data-status-key="' + key + '"]');
+  if (row) row.classList.add('status-active');
+}
+function clearStatusActive(){
+  document.querySelectorAll('.stat.status-active').forEach(n => n.classList.remove('status-active'));
+}
+
+// --- Current run tracking (artifacts produced during this single button-press) ---
+let __currentRun = { artifacts: [], hasVideo: false };
+function resetCurrentRun(){ __currentRun = { artifacts: [], hasVideo: false }; }
+function recordRunArtifact(payload){
+  if (!payload) return;
+  const item = {
+    kind: payload.kind || 'unknown',
+    label: payload.label || '',
+    url: payload.url || '',
+    text: payload.text ? String(payload.text).slice(0, 4000) : '',
+    html: payload.html ? String(payload.html).slice(0, 600) : '',
+    ts: Date.now(),
+  };
+  __currentRun.artifacts.push(item);
+  if (item.kind === 'video' || item.kind === 'composed' || (item.kind === 'html' && /compose_sleep|sleep video/i.test(item.label))) {
+    __currentRun.hasVideo = true;
+  }
+}
+
+// --- End-of-run summary card with file paths + translate prompt ---
+function renderRunSummary(){
+  if (!__currentRun.artifacts.length) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'run-summary';
+  const fileRows = __currentRun.artifacts.map(a => {
+    const kindLabel = (a.kind || 'output').toUpperCase();
+    const labelTxt = a.label || (a.kind === 'text' ? 'Script / narration text' : 'Output');
+    const link = a.url
+      ? '<a class="url-btn" href="' + a.url + '" target="_blank" rel="noopener">OPEN ↗</a>'
+      : (a.text ? '<span class="url-btn" style="color:#8893a5;border-color:#3a3a3a">INLINE</span>' : '<span class="url-btn" style="color:#8893a5;border-color:#3a3a3a">—</span>');
+    return '<div class="file-item"><span class="kind">' + kindLabel + '</span><span class="label">' + escapeHtml(labelTxt) + '</span>' + link + '</div>';
+  }).join('');
+  wrap.innerHTML = '<h3>▣ Project files</h3>' +
+    '<div class="sub">Every artifact produced this run. Open each to view or download.</div>' +
+    '<div class="file-list">' + fileRows + '</div>';
+  results.appendChild(wrap);
+  wrap.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function renderTranslatePrompt(){
+  if (!__currentRun.hasVideo) return; // only offer after a video was produced
+  const wrap = document.createElement('div');
+  wrap.className = 'translate-prompt';
+  wrap.innerHTML =
+    '<h4>🌐 Would you like this translated into the 10 highest-spoken languages in the world?</h4>' +
+    '<p>The agent will re-narrate the script in each language using ElevenLabs multilingual TTS, plus localized titles and descriptions for each.</p>' +
+    '<div class="langs">English · Mandarin · Hindi · Spanish · Arabic · French · Bengali · Russian · Portuguese · Indonesian</div>' +
+    '<div class="btn-row">' +
+      '<button class="yes" data-act="translate-yes">▶ Yes, translate all 10</button>' +
+      '<button class="no"  data-act="translate-no">No thanks</button>' +
+    '</div>';
+  results.appendChild(wrap);
+  wrap.querySelector('[data-act="translate-yes"]').addEventListener('click', () => {
+    wrap.querySelector('.btn-row').innerHTML = '<span style="color:#c7b3ff;font-weight:700">▶ Firing multilingual_pack across all 10 languages…</span>';
+    // Find the script text in this run's artifacts — prefer text-kind artifact
+    const scriptArt = __currentRun.artifacts.find(a => a.kind === 'text' && a.text) ||
+                       __currentRun.artifacts.find(a => a.text);
+    const topic = (window.__lastUserPrompt || '') +
+      (scriptArt ? '\n\nORIGINAL ENGLISH SCRIPT TO TRANSLATE VERBATIM:\n' + scriptArt.text : '');
+    runAgent({
+      skillOverride: 'multilingual_pack',
+      inlinePrompt: topic.slice(0, 6000),
+      isFollowup: true
+    });
+  });
+  wrap.querySelector('[data-act="translate-no"]').addEventListener('click', () => {
+    wrap.querySelector('.btn-row').innerHTML = '<span style="color:#8893a5">Dismissed.</span>';
+  });
+  wrap.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 const toastEl = $("#toast");
@@ -806,8 +987,13 @@ function handleEvent(event, payload){
     if (payload.requestId) addPending({ requestId: payload.requestId, label: payload.label, kind: payload.pendingKind });
     const node = renderResultBox(payload);
     results.appendChild(node);
-    node.scrollIntoView({behavior:"smooth", block:"nearest"});
+    // Auto-scroll to the BOTTOM of the page so user always sees the latest deliverable
+    requestAnimationFrame(() => {
+      node.scrollIntoView({behavior:"smooth", block:"end"});
+      setTimeout(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }), 250);
+    });
     addArtifact({ kind: payload.kind, label: payload.label, url: payload.url, html: payload.html, text: payload.text });
+    recordRunArtifact(payload);
     advancePlan();
     ev("ok", payload.kind + " rendered");
     return;
@@ -831,6 +1017,13 @@ function handleEvent(event, payload){
   if (event === "done") {
     clearActiveTool();
     ev("muted", "[done]");
+    // Render end-of-run summary with all file paths + translate prompt (if video was produced)
+    try {
+      renderRunSummary();
+      renderTranslatePrompt();
+      // Final scroll to bottom so user lands on the new summary/CTA
+      setTimeout(() => window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' }), 600);
+    } catch(e){ console.warn('summary render failed', e); }
     // Press-to-talk: deterministically release on stream close, regardless of runAgent promise state
     if (typeof __mode !== "undefined" && __mode === "firing") {
       __mode = "idle";
@@ -854,6 +1047,7 @@ async function runAgent(opts){
     planCard.style.display = "none"; planList.innerHTML = ""; planStepIndex = 0;
     sourcesCard.style.display = "none"; sourcesEl.innerHTML = "";
     history = [];
+    resetCurrentRun();
   }
   const body = { prompt: userText, history };
   window.__lastUserPrompt = userText;
@@ -1040,15 +1234,15 @@ followupEl.addEventListener("keydown", e => { if ((e.metaKey || e.ctrlKey) && e.
     if (!stat) return;
     const cap = h.capabilities || {};
     const rows = [
-      { name: "Reasoning",     ok: cap.reasoning,     meta: h.model || "" },
-      { name: "Web search",    ok: cap.web_search,    meta: cap.web_search ? "live" : "needs Anthropic key" },
-      { name: "Build (HTML)",  ok: cap.write_html,    meta: "" },
-      { name: "Image",         ok: cap.generate_image,meta: cap.generate_image ? "Runway gen4" : "needs Runway key" },
-      { name: "Motion video",  ok: cap.animate_image, meta: cap.animate_image ? "Runway gen3a" : "needs Runway key" },
-      { name: "Voice (Mini-Me)", ok: cap.speak,       meta: cap.speak ? "ElevenLabs" : "needs ElevenLabs key" },
+      { key: "reasoning",     name: "Reasoning",      ok: cap.reasoning,     meta: h.model || "" },
+      { key: "web-search",    name: "Web search",     ok: cap.web_search,    meta: cap.web_search ? "live" : "needs Anthropic key" },
+      { key: "build-html",    name: "Build (HTML)",   ok: cap.write_html,    meta: "" },
+      { key: "image",         name: "Image",          ok: cap.generate_image,meta: cap.generate_image ? "Runway gen4" : "needs Runway key" },
+      { key: "motion-video",  name: "Motion video",   ok: cap.animate_image, meta: cap.animate_image ? "Runway gen3a" : "needs Runway key" },
+      { key: "voice",         name: "Voice (Mini-Me)", ok: cap.speak,        meta: cap.speak ? "ElevenLabs" : "needs ElevenLabs key" },
     ];
     stat.innerHTML = rows.map(r => `
-      <div class="stat">
+      <div class="stat" data-status-key="${r.key}">
         <span class="dot ${r.ok ? "ok" : "warn"}"></span>
         <span class="name">${r.name}</span>
         <span class="meta">${r.meta}</span>
