@@ -54,6 +54,10 @@
   .cta:hover { background: #ff7373; text-decoration: none; }
   .cta.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
   .cta.ghost:hover { background: var(--panel); }
+  @keyframes gentleNudge {
+    0%, 100% { transform: translateY(0); opacity: 0.85; }
+    50%      { transform: translateY(-2px); opacity: 1; }
+  }
   @keyframes pulse { 0%,100% { transform: scale(1); box-shadow: 0 8px 24px rgba(255,89,89,0.6); } 50% { transform: scale(1.06); box-shadow: 0 12px 36px rgba(255,89,89,0.85); } }
   .cta.ghost:hover { background: var(--panel); }
   @keyframes pulse { 0%,100% { transform: scale(1); box-shadow: 0 8px 24px rgba(255,89,89,0.6); } 50% { transform: scale(1.06); box-shadow: 0 12px 36px rgba(255,89,89,0.85); } }
@@ -164,6 +168,12 @@
     <button id="filmAudioBtn" type="button" style="position:absolute;bottom:16px;right:16px;background:rgba(20,24,32,0.8);backdrop-filter:blur(8px);color:#fff;border:1px solid rgba(255,255,255,0.18);padding:9px 16px;border-radius:50px;font-weight:600;font-size:12px;font-family:'IBM Plex Mono',monospace;letter-spacing:.05em;display:flex;align-items:center;gap:7px;cursor:pointer;opacity:0.85;transition:opacity 0.2s,transform 0.15s;z-index:10" onmouseover="this.style.opacity=1;this.style.transform='scale(1.05)'" onmouseout="this.style.opacity=0.85;this.style.transform='scale(1)'"><span class="ico" style="font-size:14px">🔊</span> <span class="lbl">sound</span></button>
   </div>
 
+  <div id="clickToStart" style="display:none;text-align:center;padding:14px 0 0;opacity:0;transition:opacity 0.4s ease">
+    <div style="display:inline-flex;align-items:center;gap:10px;padding:10px 20px;background:rgba(255,217,61,0.10);border:1px solid rgba(255,217,61,0.4);border-radius:50px;color:#ffd93d;font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:600;letter-spacing:.03em;animation:gentleNudge 2s ease-in-out infinite">
+      <span style="font-size:16px">🔊</span>
+      <span>Click anywhere on this page to start Roger's welcome narration</span>
+    </div>
+  </div>
   <div class="skip-bar"><a href="#pressnow" id="skipFilm">Skip the film — go straight to the button →</a></div>
 </section>
 
@@ -345,17 +355,30 @@
     // to unmute. On unmute we RESTART the video from time 0 so the user always hears
     // the welcome from the beginning regardless of when they click.
     let __soundUnlocked = false;
+    const clickHint = document.getElementById('clickToStart');
+    function showClickHint(){
+      if (!clickHint) return;
+      clickHint.style.display = 'block';
+      requestAnimationFrame(() => { clickHint.style.opacity = '1'; });
+    }
+    function hideClickHint(){
+      if (!clickHint) return;
+      clickHint.style.opacity = '0';
+      setTimeout(() => { clickHint.style.display = 'none'; }, 400);
+    }
     function tryAutoplayWithSound(){
       film.muted = false;
       const pSound = film.play();
       if (pSound && pSound.then) {
         pSound.then(() => {
           __soundUnlocked = true;
+          hideClickHint();
           setBtnState();
         }).catch(() => {
           // Browser refused autoplay-with-sound. Fall back to muted playback.
           film.muted = true;
           film.play().catch(()=>{});
+          showClickHint();   // tell the user how to start audio
           setBtnState();
         });
       } else {
@@ -371,6 +394,7 @@
       film.currentTime = 0;          // restart from start so welcome plays in full
       const pr = film.play();
       if (pr && pr.catch) pr.catch(() => { film.muted = true; setBtnState(); });
+      hideClickHint();
       setBtnState();
     }
 

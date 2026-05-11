@@ -79,6 +79,31 @@
     cursor: pointer;
     position: relative;
   }
+  @keyframes progressBannerPulse {
+    0%, 100% {
+      box-shadow: 0 4px 32px rgba(255,217,61,0.35);
+      border-bottom-color: #ffd93d;
+    }
+    50% {
+      box-shadow: 0 4px 48px rgba(255,217,61,0.65), 0 0 0 4px rgba(255,217,61,0.18);
+      border-bottom-color: #ffe66d;
+    }
+  }
+  #progressBanner.complete {
+    background: linear-gradient(90deg, #1a7f3f 0%, #2bb464 100%) !important;
+    animation: none !important;
+    border-bottom-color: #7ce4a3 !important;
+    box-shadow: 0 4px 32px rgba(124,228,163,0.35) !important;
+  }
+  #progressBanner.complete #progressBar { background: linear-gradient(90deg, #7ce4a3 0%, #b8ffd1 100%) !important; box-shadow: 0 0 16px rgba(124,228,163,0.7) !important; }
+  @keyframes celebrate {
+    0%   { transform: scale(1); }
+    20%  { transform: scale(1.04); }
+    40%  { transform: scale(0.99); }
+    60%  { transform: scale(1.02); }
+    100% { transform: scale(1); }
+  }
+  #progressBanner.complete { animation: celebrate 0.9s ease-out !important; }
   @keyframes statusActivePulse {
     0%, 100% {
       box-shadow:
@@ -382,7 +407,25 @@
     </aside>
 
     <!-- CENTER: prompt + button + results -->
-    <main>
+    
+<!-- Persistent progress banner (v0.40) — shows step counter + active tool, halo pulse while running, green PROJECT COMPLETE when done -->
+<div id="progressBanner" style="display:none;position:sticky;top:0;left:0;right:0;z-index:9997;padding:14px 24px;background:linear-gradient(90deg,#ff6b35 0%,#ff3b3b 100%);color:#fff;font-family:'IBM Plex Mono',ui-monospace,monospace;border-bottom:2px solid #ffd93d;box-shadow:0 4px 32px rgba(255,217,61,0.35);animation:progressBannerPulse 1.6s ease-in-out infinite">
+  <div style="max-width:1200px;margin:0 auto;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+    <div style="display:flex;align-items:center;gap:10px;font-weight:800;font-size:14px;letter-spacing:.04em">
+      <span id="progressIcon" style="font-size:18px">⚙️</span>
+      <span id="progressStep">STEP — OF —</span>
+    </div>
+    <div style="flex:1;min-width:240px">
+      <div id="progressTool" style="font-size:13px;font-weight:600;opacity:0.95;line-height:1.35">Initializing…</div>
+      <div style="margin-top:6px;height:5px;background:rgba(0,0,0,0.28);border-radius:3px;overflow:hidden">
+        <div id="progressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#ffd93d 0%,#ffeb6e 100%);transition:width 0.6s ease;box-shadow:0 0 12px rgba(255,217,61,0.7)"></div>
+      </div>
+    </div>
+    <div id="progressElapsed" style="font-size:12px;font-weight:700;opacity:0.85;letter-spacing:.06em;min-width:60px;text-align:right">0s</div>
+  </div>
+</div>
+
+<main>
       <section class="card">
         <h3>1 · State the outcome</h3>
         <div id="gasGauge" style="display:none;align-items:center;gap:14px;margin:0 0 16px 0;padding:12px 16px;background:#0d0d12;border:1px solid #2a2a35;border-radius:8px;font-family:'IBM Plex Mono',ui-monospace,monospace">
@@ -685,6 +728,14 @@ function setActiveTool(name){
   activeToolNameEl.textContent = "⚙️ Running: " + name;
   activeToolElapsedEl.textContent = "(0s)";
   markStatusActive(name);
+  // If no plan was ever pushed for this run, still surface the active tool in the banner
+  if (progressBanner && progressBanner.style.display === 'none') {
+    progressShow(1);
+    progressSet(0, 'Running ' + name + '…');
+  } else if (progressBanner) {
+    // Plan exists — refresh the label with the actual tool firing now
+    progressToolEl.textContent = 'Running ' + name + '…';
+  }
   if (__activeToolTicker) clearInterval(__activeToolTicker);
   __activeToolTicker = setInterval(() => {
     if (__activeToolStart) activeToolElapsedEl.textContent = "(" + Math.floor((Date.now()-__activeToolStart)/1000) + "s)";
@@ -954,14 +1005,87 @@ async function speakText(text){
   await runAgent({ skillOverride: "voice_clip", inlinePrompt: text });
 }
 
+// --- v0.40 persistent progress banner controller ---
+const progressBanner = document.getElementById('progressBanner');
+const progressIconEl = document.getElementById('progressIcon');
+const progressStepEl = document.getElementById('progressStep');
+const progressToolEl = document.getElementById('progressTool');
+const progressBarEl  = document.getElementById('progressBar');
+const progressElapsedEl = document.getElementById('progressElapsed');
+
+let __progressTotal = 0;
+let __progressStart = null;
+let __progressTicker = null;
+let __progressDone = false;
+
+function progressShow(total){
+  if (!progressBanner) return;
+  __progressTotal = Math.max(1, total | 0);
+  __progressDone = false;
+  __progressStart = Date.now();
+  progressBanner.classList.remove('complete');
+  progressBanner.style.display = 'block';
+  progressIconEl.textContent = '⚙️';
+  progressStepEl.textContent = 'STEP 0 OF ' + __progressTotal;
+  progressToolEl.textContent = 'Preparing…';
+  progressBarEl.style.width = '0%';
+  progressElapsedEl.textContent = '0s';
+  if (__progressTicker) clearInterval(__progressTicker);
+  __progressTicker = setInterval(() => {
+    if (__progressStart && !__progressDone) {
+      progressElapsedEl.textContent = Math.floor((Date.now() - __progressStart)/1000) + 's';
+    }
+  }, 1000);
+}
+function progressSet(stepIdx, label){
+  if (!progressBanner || progressBanner.style.display === 'none') return;
+  const step = Math.min(stepIdx, __progressTotal);
+  progressStepEl.textContent = 'STEP ' + step + ' OF ' + __progressTotal;
+  progressToolEl.textContent = label || '';
+  progressBarEl.style.width = ((step / __progressTotal) * 100).toFixed(1) + '%';
+}
+function progressComplete(){
+  if (!progressBanner) return;
+  __progressDone = true;
+  if (__progressTicker) { clearInterval(__progressTicker); __progressTicker = null; }
+  progressBanner.classList.add('complete');
+  progressIconEl.textContent = '✓';
+  progressStepEl.textContent = 'PROJECT COMPLETE';
+  progressToolEl.textContent = 'All steps done · ' + __progressTotal + ' of ' + __progressTotal;
+  progressBarEl.style.width = '100%';
+  const final = __progressStart ? Math.floor((Date.now() - __progressStart)/1000) : 0;
+  progressElapsedEl.textContent = final + 's total';
+  // Persist on screen — do NOT auto-hide.
+}
+function progressHide(){
+  if (!progressBanner) return;
+  if (__progressTicker) { clearInterval(__progressTicker); __progressTicker = null; }
+  progressBanner.style.display = 'none';
+  progressBanner.classList.remove('complete');
+  __progressStart = null; __progressTotal = 0; __progressDone = false;
+}
+
 function pushPlan(steps){
+  const arr = steps || [];
+  // Keep the small right-rail card too for full plan visibility, but the
+  // BANNER is the primary cue now (persistent at the top).
   planCard.style.display = "block";
-  planList.innerHTML = (steps || []).map((s, i) => '<li class="plan-item" data-i="' + i + '"><div class="num">' + (i+1) + '</div><div class="text">' + escapeHtml(s) + '</div></li>').join("");
+  planList.innerHTML = arr.map((s, i) => '<li class="plan-item" data-i="' + i + '"><div class="num">' + (i+1) + '</div><div class="text">' + escapeHtml(s) + '</div></li>').join("");
   planStepIndex = 0;
+  progressShow(arr.length);
+  if (arr.length) progressSet(0, arr[0]);
 }
 function advancePlan(){
   const items = $$(".plan-item", planList);
-  if (planStepIndex < items.length){ items[planStepIndex].classList.add("done"); planStepIndex++; }
+  if (planStepIndex < items.length){
+    items[planStepIndex].classList.add("done");
+    planStepIndex++;
+  }
+  // Update banner with the NEXT step label (or current tool if no next)
+  const nextLabel = (items[planStepIndex] && items[planStepIndex].querySelector('.text'))
+    ? items[planStepIndex].querySelector('.text').textContent
+    : (__activeToolName || 'Wrapping up…');
+  progressSet(planStepIndex, nextLabel);
 }
 function pushSources(items){
   if (!items || !items.length) return;
@@ -1017,6 +1141,7 @@ function handleEvent(event, payload){
   if (event === "done") {
     clearActiveTool();
     ev("muted", "[done]");
+    progressComplete();
     // Render end-of-run summary with all file paths + translate prompt (if video was produced)
     try {
       renderRunSummary();
@@ -1048,6 +1173,7 @@ async function runAgent(opts){
     sourcesCard.style.display = "none"; sourcesEl.innerHTML = "";
     history = [];
     resetCurrentRun();
+    progressHide();
   }
   const body = { prompt: userText, history };
   window.__lastUserPrompt = userText;
