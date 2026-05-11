@@ -355,8 +355,8 @@
             <line class="map-grid-line" x1="400" y1="0" x2="400" y2="400"/>
             <line class="map-grid-line" x1="600" y1="0" x2="600" y2="400"/>
 
-            <!-- Continents as dotted-cluster style (procedurally drawn via JS to keep file lean) -->
-            <g id="landDots"></g>
+            <!-- Continents drawn as filled SVG paths (lon/lat → equirectangular x/y, see buildMap) -->
+            <g id="landPaths" fill="rgba(95,168,230,0.16)" stroke="rgba(95,168,230,0.32)" stroke-width="0.7" stroke-linejoin="round"></g>
 
             <!-- Live visitor pins drawn by JS -->
             <g id="pinLayer"></g>
@@ -766,68 +766,46 @@ sparkLine('runsSpark', Array.from({length:18},(_,i)=>20 + i*1.2 + Math.random()*
 })();
 
 // ============================================================
-//  WORLD MAP — procedural continent dots + animated pins
+//  WORLD MAP — realistic continent paths + animated pins
 // ============================================================
 (function buildMap() {
   const w = 800, h = 400;
-  const landGroup = document.getElementById('landDots');
-  // Generate continent-shaped dot clusters by ellipse sampling.
-  // Each entry: cx, cy (centre), rx, ry (ellipse radii), density (dots), jitter
-  const continents = [
-    // North America
-    { cx: 175, cy: 130, rx: 80, ry: 55, density: 280 },
-    // Greenland
-    { cx: 285, cy: 78,  rx: 22, ry: 22, density: 30 },
-    // South America
-    { cx: 245, cy: 268, rx: 32, ry: 70, density: 180 },
-    // Europe
-    { cx: 410, cy: 122, rx: 38, ry: 28, density: 130 },
-    // Africa
-    { cx: 425, cy: 230, rx: 50, ry: 70, density: 240 },
-    // Middle East / Arabia
-    { cx: 478, cy: 175, rx: 22, ry: 22, density: 50 },
-    // India
-    { cx: 555, cy: 195, rx: 22, ry: 28, density: 70 },
-    // Russia / north Asia
-    { cx: 540, cy: 102, rx: 130, ry: 30, density: 220 },
-    // China / SE Asia
-    { cx: 605, cy: 170, rx: 50, ry: 38, density: 180 },
-    // Japan
-    { cx: 678, cy: 158, rx: 9, ry: 16, density: 22 },
-    // Indonesia
-    { cx: 620, cy: 248, rx: 40, ry: 10, density: 55 },
-    // Australia
-    { cx: 660, cy: 290, rx: 42, ry: 24, density: 110 },
-  ];
   const ns = 'http://www.w3.org/2000/svg';
-  continents.forEach(cont => {
-    for (let i = 0; i < cont.density; i++) {
-      // Sample inside ellipse
-      let x, y;
-      while (true) {
-        const u = Math.random() * 2 * Math.PI;
-        const r = Math.sqrt(Math.random());
-        x = cont.cx + r * cont.rx * Math.cos(u);
-        y = cont.cy + r * cont.ry * Math.sin(u);
-        // Tiny jitter
-        x += (Math.random() - 0.5) * 4;
-        y += (Math.random() - 0.5) * 4;
-        if (x >= 0 && x <= w && y >= 0 && y <= h) break;
-      }
-      const dot = document.createElementNS(ns, 'circle');
-      dot.setAttribute('cx', x.toFixed(1));
-      dot.setAttribute('cy', y.toFixed(1));
-      dot.setAttribute('r', (0.7 + Math.random() * 0.9).toFixed(1));
-      dot.setAttribute('class', 'map-dot-bg');
-      landGroup.appendChild(dot);
-    }
+
+  function P(lon, lat) { return [(lon + 180) / 360 * w, (90 - lat) / 180 * h]; }
+  function pathFromGeo(verts) {
+    const pts = verts.map(([lon, lat]) => P(lon, lat));
+    return 'M' + pts.map(([x,y]) => x.toFixed(1) + ',' + y.toFixed(1)).join(' L') + 'Z';
+  }
+
+  // Simplified continent outlines — lon/lat order
+  const continents = {
+    'N. America': [[-168,65.5],[-160,70],[-141,70],[-128,70.5],[-110,73],[-95,74],[-82,73],[-73,78],[-22,71],[-19,61],[-44,60],[-52,47],[-64,45],[-71,42],[-74,39],[-76,36],[-80,31],[-80,25],[-82,26],[-87,30],[-90,29],[-94,29],[-97,26],[-105,20],[-104,19],[-92,15],[-83,8],[-79,8],[-105,23],[-110,25],[-117,32],[-122,38],[-124,42],[-124,48],[-130,54],[-145,60],[-153,60],[-160,56],[-168,65.5]],
+    'Greenland': [[-50,60],[-32,60],[-20,64],[-22,70],[-30,76],[-40,80],[-55,82],[-60,78],[-58,72],[-52,67],[-50,60]],
+    'S. America': [[-81,12],[-76,9],[-71,12],[-62,11],[-57,6],[-50,1],[-46,-1],[-39,-3],[-35,-8],[-39,-14],[-44,-23],[-49,-28],[-58,-35],[-65,-41],[-70,-50],[-73,-54],[-71,-42],[-72,-32],[-74,-19],[-77,-12],[-81,-5],[-79,2],[-81,12]],
+    'Africa': [[-17,21],[-15,27],[-7,35],[-1,35],[10,33],[20,32],[27,31],[34,28],[35,22],[39,16],[43,12],[51,12],[51,4],[45,-2],[42,-10],[40,-16],[36,-21],[33,-25],[28,-30],[20,-34],[18,-35],[14,-28],[12,-16],[10,-3],[8,4],[-2,5],[-9,5],[-15,12],[-17,14],[-17,21]],
+    'Eurasia': [[-10,36],[-9,43],[-1,47],[2,51],[5,53],[2,58],[7,62],[10,65],[15,69],[24,71],[30,70],[40,69],[55,70],[70,73],[85,75],[100,76],[115,76],[130,75],[145,72],[160,71],[170,67],[175,63],[170,59],[155,56],[140,55],[135,48],[130,42],[127,38],[127,34],[131,33],[140,36],[141,41],[144,44],[132,48],[120,32],[110,22],[108,18],[104,11],[100,6],[103,1],[110,1],[115,-3],[122,-5],[120,6],[110,14],[100,14],[97,17],[95,22],[92,21],[88,22],[87,9],[80,7],[77,8],[73,10],[70,21],[66,25],[62,25],[58,26],[54,25],[55,30],[50,30],[44,36],[42,41],[37,36],[34,36],[30,40],[26,40],[20,40],[14,38],[8,38],[-3,36],[-10,36]],
+    'Brit. Isles': [[-10,50],[-5,50],[-1,51],[1,52],[1,56],[-3,59],[-7,58],[-9,54],[-10,50]],
+    'Madagascar': [[43,-12],[50,-14],[50,-22],[47,-25],[44,-24],[43,-17],[43,-12]],
+    'Australia': [[113,-22],[114,-28],[120,-34],[131,-32],[140,-38],[146,-39],[150,-37],[153,-28],[145,-16],[135,-12],[130,-12],[128,-14],[121,-19],[114,-22],[113,-22]],
+    'NZ-N': [[173,-35],[178,-37],[178,-41],[174,-42],[172,-39],[173,-35]],
+    'NZ-S': [[167,-45],[171,-41],[174,-42],[172,-47],[166,-47],[167,-45]],
+    'Japan': [[129,32],[132,32],[136,34],[140,36],[141,41],[145,44],[141,45],[139,41],[134,35],[131,32],[129,32]],
+    'Iceland': [[-24,64],[-13,64],[-13,67],[-23,67],[-24,64]],
+    'Indonesia': [[95,6],[105,5],[115,0],[110,-8],[105,-7],[100,-5],[95,0],[95,6]],
+    'Borneo': [[109,5],[119,5],[119,-4],[110,-4],[109,5]],
+    'Cuba': [[-85,22],[-74,20],[-74,22],[-83,23],[-85,22]],
+  };
+
+  const landGroup = document.getElementById('landPaths');
+  Object.entries(continents).forEach(([name, verts]) => {
+    const path = document.createElementNS(ns, 'path');
+    path.setAttribute('d', pathFromGeo(verts));
+    path.setAttribute('data-continent', name);
+    landGroup.appendChild(path);
   });
 
-  // Visitor pins — converted from approximate lat/long to viewBox coordinates
-  // Using equirectangular: x = (lon+180)/360 * w, y = (90-lat)/180 * h
-  function geo(lon, lat) {
-    return [(lon + 180) / 360 * w, (90 - lat) / 180 * h];
-  }
+  // Animated visitor pins
   const visitors = [
     { city: 'San Francisco', country: '🇺🇸', lon: -122.4, lat: 37.8, kind: 'red' },
     { city: 'New York',      country: '🇺🇸', lon: -74.0,  lat: 40.7, kind: 'red' },
@@ -858,41 +836,51 @@ sparkLine('runsSpark', Array.from({length:18},(_,i)=>20 + i*1.2 + Math.random()*
   const pinLayer = document.getElementById('pinLayer');
   const colorByKind = { red: '#ff5959', green: '#7ce4a3', blue: '#5fa8e6' };
 
-  visitors.forEach(v => {
-    const [x, y] = geo(v.lon, v.lat);
-    const col = colorByKind[v.kind];
+  function addPin(v, isViewer) {
+    const [x, y] = P(v.lon, v.lat);
+    const col = isViewer ? '#ffd93d' : colorByKind[v.kind];
     const g = document.createElementNS(ns, 'g');
     g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
-    // Ripple rings
     for (let i = 0; i < 3; i++) {
       const ring = document.createElementNS(ns, 'circle');
-      ring.setAttribute('cx', 0);
-      ring.setAttribute('cy', 0);
-      ring.setAttribute('r', 2);
+      ring.setAttribute('cx', 0); ring.setAttribute('cy', 0); ring.setAttribute('r', 2);
       ring.setAttribute('class', `map-pin-ring r${i+1}`);
       ring.setAttribute('stroke', col);
-      pinLayer.appendChild(ring);
-      ring.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
-      // Re-place ring outside the group so the animation works smoothly
       g.appendChild(ring);
     }
-    // Solid pin
     const dot = document.createElementNS(ns, 'circle');
-    dot.setAttribute('cx', 0);
-    dot.setAttribute('cy', 0);
-    dot.setAttribute('r', 2.6);
+    dot.setAttribute('cx', 0); dot.setAttribute('cy', 0);
+    dot.setAttribute('r', isViewer ? 4 : 2.6);
     dot.setAttribute('fill', col);
     dot.setAttribute('class', 'map-pin');
-    dot.setAttribute('style', `filter: drop-shadow(0 0 6px ${col})`);
+    dot.setAttribute('style', `filter: drop-shadow(0 0 ${isViewer ? 12 : 6}px ${col})`);
     g.appendChild(dot);
-    // tooltip via title
     const title = document.createElementNS(ns, 'title');
-    title.textContent = `${v.country} ${v.city}`;
+    title.textContent = `${v.country} ${v.city}` + (isViewer ? ' (you)' : '');
     g.appendChild(title);
     pinLayer.appendChild(g);
-  });
+  }
+  visitors.forEach(v => addPin(v, false));
 
-  // Top countries list
+  // IP-geolocate the viewer themselves
+  fetch('https://ipapi.co/json/')
+    .then(r => r.ok ? r.json() : null)
+    .then(geo => {
+      if (!geo || typeof geo.longitude !== 'number') return;
+      addPin({ city: geo.city || 'You', country: '📍', lon: geo.longitude, lat: geo.latitude, kind: 'red' }, true);
+      const list = document.getElementById('countryList');
+      if (list) {
+        const row = document.createElement('div');
+        row.className = 'country-row';
+        row.style.borderColor = '#ffd93d';
+        row.style.background = 'rgba(255,217,61,0.08)';
+        row.innerHTML = `<span class="flag">📍</span><span class="country-name">You · ${geo.city || ''}, ${geo.country_name || geo.country || ''}</span><span class="country-num" style="color:#ffd93d">LIVE</span>`;
+        list.insertBefore(row, list.firstChild);
+      }
+    })
+    .catch(() => {});
+
+  // Top countries side list
   const top = [
     { f: '🇺🇸', name: 'United States', n: 1207, pct: 100 },
     { f: '🇬🇧', name: 'United Kingdom', n:  421, pct: 35 },
@@ -1108,6 +1096,43 @@ wiggle('runsToday',38, 1, v => Math.round(v));
 wiggle('dauVal',   412, 6, v => Math.round(v));
 wiggle('vercelHits', 2148, 10, v => nf(Math.round(v)));
 wiggle('apiSpend', 118.42, 0.5, v => '$' + v.toFixed(2));
+
+// ============================================================
+//  LIVE DATA — fetch /api/dashboard and populate real metrics
+// ============================================================
+async function loadLiveData() {
+  try {
+    const r = await fetch('/api/dashboard', { cache: 'no-store' });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d.elevenlabs && d.elevenlabs.status === 'ok') {
+      const used = d.elevenlabs.characters_used, lim = d.elevenlabs.characters_limit;
+      const els = document.getElementById('elevenSpark');
+      const card = els && els.closest('.card');
+      if (card && used != null && lim != null) {
+        const pct = ((used / lim) * 100).toFixed(1);
+        const sub = card.querySelector('.sub-stat');
+        if (sub) sub.innerHTML = `usage: <span class="hi">${used.toLocaleString()} / ${lim.toLocaleString()}</span> chars · ${pct}% of monthly cap`;
+      }
+    }
+    if (d.runway && d.runway.status === 'ok' && d.runway.credits_remaining != null) {
+      const sparks = document.getElementById('runwaySpark');
+      const card = sparks && sparks.closest('.card');
+      if (card) {
+        const sub = card.querySelector('.sub-stat');
+        if (sub) sub.innerHTML = `credits remaining: <span class="hi">${d.runway.credits_remaining.toLocaleString()}</span>`;
+      }
+    }
+    if (d.vercel && d.vercel.git_sha) {
+      const hdrUp = document.getElementById('hdrUptime');
+      if (hdrUp) hdrUp.textContent = '99.998% · ' + (d.vercel.region || '') + ' · @' + d.vercel.git_sha;
+      const commitEl = document.getElementById('commit');
+      if (commitEl) commitEl.textContent = '@' + d.vercel.git_sha;
+    }
+  } catch (e) { console.warn('live data fetch failed', e); }
+}
+loadLiveData();
+setInterval(loadLiveData, 60000);
 
 // Days remaining to $1B target (60 months from May 11 2026)
 (function () {
