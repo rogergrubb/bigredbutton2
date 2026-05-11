@@ -25,26 +25,78 @@ const FALLBACK = {
 };
 
 // ---------- ElevenLabs ----------
+// Tries endpoints in fallback order. The TTS-only API key Roger uses has limited
+// scope — /v1/user/subscription returns 401 unless the key has 'user_read' permission.
+// We progressively degrade to endpoints that work with weaker scopes so something
+// useful comes back regardless.
 async function fetchElevenLabs(key) {
   if (!key) return { ...FALLBACK.elevenlabs, status: 'missing_key' };
+  const headers = { 'xi-api-key': key, 'Accept': 'application/json' };
+  const tries = [];
+
+  // Attempt 1: full subscription endpoint (needs 'user_read' scope)
   try {
-    const r = await fetch('https://api.elevenlabs.io/v1/user/subscription', {
-      headers: { 'xi-api-key': key, 'Accept': 'application/json' },
-    });
-    if (!r.ok) return { ...FALLBACK.elevenlabs, status: `http_${r.status}` };
-    const d = await r.json();
-    return {
-      characters_used:  d.character_count ?? null,
-      characters_limit: d.character_limit ?? null,
-      tier:             d.tier ?? 'unknown',
-      voice_limit:      d.voice_limit ?? null,
-      voice_count:      d.voice_count ?? null,
-      next_reset:       d.next_character_count_reset_unix ?? null,
-      status: 'ok',
-    };
+    const r = await fetch('https://api.elevenlabs.io/v1/user/subscription', { headers });
+    tries.push({ path: '/v1/user/subscription', status: r.status });
+    if (r.ok) {
+      const d = await r.json();
+      return {
+        characters_used:  d.character_count ?? null,
+        characters_limit: d.character_limit ?? null,
+        tier:             d.tier ?? 'unknown',
+        voice_limit:      d.voice_limit ?? null,
+        voice_count:      d.voice_count ?? null,
+        next_reset:       d.next_character_count_reset_unix ?? null,
+        source:           '/v1/user/subscription',
+        status: 'ok',
+      };
+    }
   } catch (e) {
-    return { ...FALLBACK.elevenlabs, status: 'error:' + (e.message || e) };
+    tries.push({ path: '/v1/user/subscription', error: e.message || String(e) });
   }
+
+  // Attempt 2: /v1/user (sometimes works with weaker scopes, sometimes returns subscription nested)
+  try {
+    const r = await fetch('https://api.elevenlabs.io/v1/user', { headers });
+    tries.push({ path: '/v1/user', status: r.status });
+    if (r.ok) {
+      const d = await r.json();
+      const sub = d.subscription || {};
+      return {
+        characters_used:  sub.character_count ?? null,
+        characters_limit: sub.character_limit ?? null,
+        tier:             sub.tier ?? d.subscription_tier ?? 'unknown',
+        voice_count:      null,
+        source:           '/v1/user',
+        status: 'ok',
+      };
+    }
+  } catch (e) {
+    tries.push({ path: '/v1/user', error: e.message || String(e) });
+  }
+
+  // Attempt 3: /v1/voices (the broadest-scope endpoint — almost always accessible)
+  try {
+    const r = await fetch('https://api.elevenlabs.io/v1/voices', { headers });
+    tries.push({ path: '/v1/voices', status: r.status });
+    if (r.ok) {
+      const d = await r.json();
+      const voices = d.voices || [];
+      return {
+        characters_used:  null,
+        characters_limit: null,
+        tier:             'unknown',
+        voice_count:      voices.length,
+        voice_sample:     voices.slice(0, 5).map(v => v.name).filter(Boolean),
+        source:           '/v1/voices',
+        status: 'ok',
+      };
+    }
+  } catch (e) {
+    tries.push({ path: '/v1/voices', error: e.message || String(e) });
+  }
+
+  return { ...FALLBACK.elevenlabs, status: 'all_failed', tries };
 }
 
 // ---------- Runway ----------

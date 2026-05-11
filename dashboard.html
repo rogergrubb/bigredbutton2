@@ -1106,13 +1106,19 @@ async function loadLiveData() {
     if (!r.ok) return;
     const d = await r.json();
     if (d.elevenlabs && d.elevenlabs.status === 'ok') {
-      const used = d.elevenlabs.characters_used, lim = d.elevenlabs.characters_limit;
       const els = document.getElementById('elevenSpark');
       const card = els && els.closest('.card');
-      if (card && used != null && lim != null) {
-        const pct = ((used / lim) * 100).toFixed(1);
+      if (card) {
         const sub = card.querySelector('.sub-stat');
-        if (sub) sub.innerHTML = `usage: <span class="hi">${used.toLocaleString()} / ${lim.toLocaleString()}</span> chars · ${pct}% of monthly cap`;
+        if (sub) {
+          if (d.elevenlabs.characters_used != null && d.elevenlabs.characters_limit != null) {
+            const used = d.elevenlabs.characters_used, lim = d.elevenlabs.characters_limit;
+            const pct = ((used / lim) * 100).toFixed(1);
+            sub.innerHTML = `usage: <span class="hi">${used.toLocaleString()} / ${lim.toLocaleString()}</span> chars · ${pct}% of monthly cap`;
+          } else if (d.elevenlabs.voice_count != null) {
+            sub.innerHTML = `${d.elevenlabs.voice_count} voices available · scoped key (no usage scope)`;
+          }
+        }
       }
     }
     if (d.runway && d.runway.status === 'ok' && d.runway.credits_remaining != null) {
