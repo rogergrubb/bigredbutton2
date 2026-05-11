@@ -453,19 +453,31 @@ async function toolAnimateImage({ image_url, prompt, duration = 5, ratio = '720:
 
 async function toolSpeak({ text, voice_id, pace }) {
   requireKey('ELEVENLABS_API_KEY');
-  const vid = voice_id || DEFAULT_VOICE;
   // pace control — for sleep/meditation/asmr narration, slow the delivery
   const isSlow = pace === 'slow' || pace === 'sleep' || pace === 'meditation';
+  // For sleep/meditation, force the calm Rachel narrator unless caller passed an explicit voice_id.
+  // The env DEFAULT_VOICE may be Roger's cloned voice (too punchy for sleep content).
+  const RACHEL = '21m00Tcm4TlvDq8ikWAM';
+  const vid = voice_id || (isSlow ? RACHEL : DEFAULT_VOICE);
   let processedText = text;
   let voiceSettings = { stability: 0.65, similarity_boost: 0.85, style: 0.15, use_speaker_boost: true };
   if (isSlow) {
-    // 1) Inject pauses after sentence-ending punctuation. The "..." pattern reads as natural breath in ElevenLabs.
+    // 1) Inject REAL silence via SSML break tags. eleven_multilingual_v2 honors these and renders actual gaps
+    //    (the old "..." pattern was being SPOKEN as "dot dot dot" by some voices — not silence).
+    //    Tiered durations: meditation > sleep > slow.
+    const sentenceMs = pace === 'meditation' ? 2500 : pace === 'sleep' ? 2000 : 1500;
+    const commaMs    = pace === 'meditation' ? 900  : pace === 'sleep' ? 700  : 500;
+    const dashMs     = pace === 'meditation' ? 1500 : pace === 'sleep' ? 1200 : 900;
+    const toS = ms => (ms / 1000).toFixed(1) + 's';
     processedText = text
-      .replace(/([.!?])\s+/g, '$1 ... ')
-      .replace(/,\s+/g, ', ... ')
-      .replace(/—/g, ' ... — ... ');
-    // 2) Voice settings: higher stability (less variation), zero style (no excitement), keeps it measured.
-    voiceSettings = { stability: 0.85, similarity_boost: 0.90, style: 0.0, use_speaker_boost: true };
+      .replace(/([.!?])\s+/g, `$1 <break time="${toS(sentenceMs)}" /> `)
+      .replace(/,\s+/g,        `, <break time="${toS(commaMs)}" /> `)
+      .replace(/—/g,             ` <break time="${toS(dashMs)}" /> `);
+    // 2) Voice settings + global playback speed.
+    //    speed: 0.7-1.2 in eleven voice_settings. Lower = slower delivery without pitch change.
+    //    meditation=0.75 (very slow), sleep=0.80 (slow), slow=0.85 (relaxed).
+    const speed = pace === 'meditation' ? 0.75 : pace === 'sleep' ? 0.80 : 0.85;
+    voiceSettings = { stability: 0.88, similarity_boost: 0.90, style: 0.0, use_speaker_boost: true, speed };
   }
   const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${vid}`, {
     method: 'POST',
