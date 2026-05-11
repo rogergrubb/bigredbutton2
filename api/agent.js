@@ -15,7 +15,7 @@
 //   ELEVENLABS_VOICE_ID      (default: Roger's clone)
 //   ANTHROPIC_MODEL          (default: claude-sonnet-4-5)
 
-export const config = { maxDuration: 60 };  // Node serverless — Edge had 25s cap which couldn't wait for gen4.5 (60-90s) or even gen4_turbo (15-25s) reliably.
+export const config = { runtime: 'edge' };
 
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-5';
 const DEFAULT_VOICE   = process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM'; // Rachel — neutral female narrator
@@ -445,9 +445,9 @@ async function toolAnimateImage({ image_url, prompt, duration = 5, ratio = '720:
     },
   });
   // Try a short inline poll inside Edge budget. If task isn't done, return task_id.
-  // Extended to 50s — Node serverless gives us 60s budget. gen4_turbo finishes in 15-25s, gen4.5 in 60-90s.
-  // We wait long enough to land gen4_turbo inline so the chain can proceed to compose without queueing.
-  const done = await runwayPollTask(created.id, { maxMs: 50000, intervalMs: 3000 }).catch(() => null);
+  // Edge budget is ~25s; keep poll at 20s to leave room for the rest of the agent loop in the same call.
+  // For sleep pipeline we force gen4_turbo (~15-25s) which finishes in this window most of the time.
+  const done = await runwayPollTask(created.id, { maxMs: 20000, intervalMs: 3000 }).catch(() => null);
   if (done && done.output && done.output[0]) {
     return { url: done.output[0], duration, prompt, model };
   }
