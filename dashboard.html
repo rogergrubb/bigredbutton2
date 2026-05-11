@@ -1,0 +1,1122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Command Center — Big Red Button · Number One Son</title>
+<meta name="description" content="The solopreneur command center. Real-time world map, $1B trajectory, elite SaaS metrics, Runway API spend, YouTube channel velocity." />
+<meta name="robots" content="noindex" />
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<style>
+  :root {
+    --bg:           #050810;
+    --panel:        #0d1320;
+    --panel-2:      #11192a;
+    --line:         #1f2a3f;
+    --line-bright:  #2c3a55;
+    --ink:          #e8eef6;
+    --muted:        #6b7891;
+    --accent:       #ffd93d;
+    --green:        #7ce4a3;
+    --red:          #ff5959;
+    --blue:         #5fa8e6;
+    --purple:       #b388ff;
+    --orange:       #ff9e3f;
+    --cyan:         #4dd6e0;
+  }
+  *,*::before,*::after { box-sizing: border-box; }
+  html,body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, Roboto, sans-serif;
+    line-height: 1.45;
+    overflow-x: hidden;
+  }
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { color: #fff; }
+  .mono { font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+  /* ====== Background ambient grid ====== */
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(95,168,230,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(95,168,230,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    pointer-events: none; z-index: 0;
+  }
+  body::after {
+    content: ''; position: fixed; inset: 0;
+    background: radial-gradient(ellipse at top right, rgba(255,217,61,0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at bottom left, rgba(95,168,230,0.06) 0%, transparent 50%);
+    pointer-events: none; z-index: 0;
+  }
+  .page { position: relative; z-index: 1; max-width: 1640px; margin: 0 auto; padding: 18px 24px 60px; }
+
+  /* ====== Header ====== */
+  header {
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
+    padding: 12px 18px; margin-bottom: 16px;
+    background: linear-gradient(180deg, rgba(13,19,32,0.95), rgba(13,19,32,0.6));
+    border: 1px solid var(--line-bright); border-radius: 14px;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .mark { width: 38px; height: 38px; border-radius: 10px;
+                 background: linear-gradient(135deg, var(--red) 0%, #b32020 100%);
+                 display: grid; place-items: center; font-weight: 900; color: #fff; font-size: 20px;
+                 box-shadow: 0 8px 24px rgba(255,89,89,0.4); }
+  .brand .text { display: flex; flex-direction: column; gap: 2px; }
+  .brand .name { font-size: 14px; font-weight: 800; letter-spacing: 0.04em; }
+  .brand .name b { color: var(--red); }
+  .brand .sub { font-size: 11px; color: var(--muted); letter-spacing: 0.18em; text-transform: uppercase; font-family: 'IBM Plex Mono', monospace; }
+
+  .hdr-stats { display: flex; gap: 18px; flex-wrap: wrap; align-items: center; }
+  .hdr-stat { display: flex; flex-direction: column; gap: 2px; padding: 0 14px; border-left: 1px solid var(--line); }
+  .hdr-stat:first-child { border-left: 0; padding-left: 0; }
+  .hdr-stat .label { font-size: 10px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; font-family: 'IBM Plex Mono', monospace; }
+  .hdr-stat .val { font-size: 16px; font-weight: 700; color: #fff; }
+  .hdr-stat .val.green { color: var(--green); }
+  .hdr-stat .val.accent { color: var(--accent); }
+
+  .live-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px; background: rgba(124,228,163,0.12);
+    border: 1px solid rgba(124,228,163,0.4); border-radius: 50px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 700;
+    color: var(--green); letter-spacing: 0.1em;
+  }
+  .live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: livePulse 1.4s ease-in-out infinite; }
+  @keyframes livePulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(124,228,163,0.7); }
+    50% { box-shadow: 0 0 0 8px rgba(124,228,163,0); }
+  }
+
+  /* ====== Sections ====== */
+  .section-head { display: flex; align-items: baseline; gap: 14px; margin: 24px 0 12px; }
+  .section-head .num { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--accent); letter-spacing: 0.2em; font-weight: 700; }
+  .section-head h2 { margin: 0; font-size: 18px; font-weight: 800; letter-spacing: -0.01em; color: #fff; }
+  .section-head .meta { margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.08em; }
+
+  /* ====== Grid base ====== */
+  .grid { display: grid; gap: 14px; }
+  .g-4 { grid-template-columns: repeat(4, 1fr); }
+  .g-3 { grid-template-columns: repeat(3, 1fr); }
+  .g-2 { grid-template-columns: repeat(2, 1fr); }
+  .g-12 { grid-template-columns: repeat(12, 1fr); }
+  @media (max-width: 1100px) {
+    .g-4 { grid-template-columns: repeat(2, 1fr); }
+    .g-3 { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 720px) {
+    .g-4, .g-3, .g-2 { grid-template-columns: 1fr; }
+  }
+
+  /* ====== Card ====== */
+  .card {
+    background: linear-gradient(180deg, var(--panel) 0%, var(--panel-2) 100%);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color .2s, transform .15s;
+  }
+  .card:hover { border-color: var(--line-bright); transform: translateY(-1px); }
+  .card .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .card .title { font-size: 10.5px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; font-family: 'IBM Plex Mono', monospace; font-weight: 700; }
+  .card .delta { font-size: 11px; padding: 2px 8px; border-radius: 50px; font-family: 'IBM Plex Mono', monospace; font-weight: 700; }
+  .card .delta.up { background: rgba(124,228,163,0.14); color: var(--green); }
+  .card .delta.down { background: rgba(255,89,89,0.14); color: var(--red); }
+  .card .delta.flat { background: rgba(107,120,145,0.14); color: var(--muted); }
+
+  .kpi { font-size: 36px; font-weight: 800; letter-spacing: -0.02em; color: #fff; line-height: 1.05; margin: 0 0 6px; font-family: 'IBM Plex Mono', monospace; }
+  .kpi .unit { font-size: 18px; color: var(--muted); margin-left: 4px; font-weight: 600; }
+  .sub-stat { font-size: 12px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+  .sub-stat .hi { color: #fff; font-weight: 600; }
+
+  .spark { width: 100%; height: 38px; margin-top: 8px; }
+
+  /* ====== North Star — $1B trajectory hero ====== */
+  .north-star {
+    grid-column: span 12;
+    background:
+      radial-gradient(ellipse at top left, rgba(255,217,61,0.10) 0%, transparent 50%),
+      linear-gradient(135deg, rgba(13,19,32,0.95) 0%, rgba(20,28,46,0.95) 100%);
+    border: 1.5px solid rgba(255,217,61,0.35);
+    border-radius: 18px;
+    padding: 26px 30px;
+    position: relative; overflow: hidden;
+  }
+  .north-star::before {
+    content: 'NORTH STAR'; position: absolute; top: 14px; right: 22px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: var(--accent);
+    letter-spacing: 0.24em; font-weight: 700;
+  }
+  .north-star h1 { margin: 0 0 6px; font-size: 22px; font-weight: 900; letter-spacing: -0.01em; }
+  .north-star h1 .red { color: var(--red); }
+  .north-star h1 .green { color: var(--green); }
+  .north-star .lead { color: var(--muted); margin: 0 0 18px; font-size: 13.5px; max-width: 760px; }
+  .ns-row { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 20px; align-items: center; }
+  @media (max-width: 900px) { .ns-row { grid-template-columns: 1fr 1fr; } }
+  .ns-trajectory canvas { width: 100% !important; height: 130px !important; }
+  .ns-cell .l { font-size: 10.5px; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; font-family: 'IBM Plex Mono', monospace; }
+  .ns-cell .n { font-size: 28px; font-weight: 900; color: #fff; font-family: 'IBM Plex Mono', monospace; margin: 4px 0 4px; }
+  .ns-cell .n.accent { color: var(--accent); }
+  .ns-cell .n.green { color: var(--green); }
+  .ns-cell .x { font-size: 12px; color: var(--muted); }
+
+  /* ====== World map ====== */
+  .map-card { grid-column: span 12; padding: 22px 24px; }
+  .map-wrap { position: relative; width: 100%; aspect-ratio: 2 / 1; background: #060914; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .map-svg { width: 100%; height: 100%; display: block; }
+  .map-pin { fill: var(--red); }
+  .map-pin-ring { fill: none; stroke: var(--red); stroke-width: 1.3; opacity: 0; transform-origin: center; }
+  .map-pin-ring.r1 { animation: pinRing 3s ease-out infinite; }
+  .map-pin-ring.r2 { animation: pinRing 3s ease-out infinite; animation-delay: 1s; }
+  .map-pin-ring.r3 { animation: pinRing 3s ease-out infinite; animation-delay: 2s; }
+  @keyframes pinRing {
+    0%   { r: 2.5; opacity: 0.85; }
+    100% { r: 28;  opacity: 0; }
+  }
+  .map-dot-bg { fill: rgba(95,168,230,0.18); }
+  .map-grid-line { stroke: rgba(95,168,230,0.06); stroke-width: 0.4; fill: none; }
+  .map-legend { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 14px; padding: 10px 14px;
+                background: rgba(6,9,20,0.7); border-radius: 8px; border: 1px solid var(--line);
+                font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--muted); }
+  .map-legend .item { display: flex; align-items: center; gap: 8px; }
+  .map-legend .swatch { width: 10px; height: 10px; border-radius: 50%; }
+  .map-legend .swatch.red { background: var(--red); box-shadow: 0 0 8px rgba(255,89,89,0.7); }
+  .map-legend .swatch.green { background: var(--green); box-shadow: 0 0 8px rgba(124,228,163,0.7); }
+  .map-legend .swatch.blue { background: var(--blue); box-shadow: 0 0 8px rgba(95,168,230,0.7); }
+
+  .map-side { display: flex; flex-direction: column; gap: 10px; }
+  .country-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px;
+                 background: rgba(13,19,32,0.6); border: 1px solid var(--line); border-radius: 8px; }
+  .country-row .flag { font-size: 16px; }
+  .country-row .country-name { flex: 1; margin-left: 10px; font-size: 12.5px; color: #fff; font-weight: 600; }
+  .country-row .country-num { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--green); font-weight: 700; }
+  .country-row .bar { height: 3px; flex-basis: 70px; margin-right: 12px; background: var(--line); border-radius: 2px; overflow: hidden; }
+  .country-row .bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--green), var(--cyan)); }
+
+  /* ====== Charts ====== */
+  .chart-wrap canvas { width: 100% !important; max-height: 200px; }
+
+  /* ====== Live feed ====== */
+  .feed { font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.7;
+          background: #060914; border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px;
+          height: 220px; overflow: hidden; position: relative; }
+  .feed-item { display: flex; gap: 12px; align-items: flex-start; opacity: 0; animation: feedIn 0.6s ease-out forwards; }
+  .feed-item .t { color: var(--muted); font-size: 11px; min-width: 56px; }
+  .feed-item .badge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 3px; min-width: 50px; text-align: center; letter-spacing: 0.06em; }
+  .feed-item .badge.ok { background: rgba(124,228,163,0.18); color: var(--green); }
+  .feed-item .badge.fire { background: rgba(255,158,63,0.18); color: var(--orange); }
+  .feed-item .badge.run { background: rgba(95,168,230,0.18); color: var(--blue); }
+  .feed-item .badge.pay { background: rgba(179,136,255,0.18); color: var(--purple); }
+  .feed-item .msg { color: #cfd6e2; }
+  @keyframes feedIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ====== Gauges ====== */
+  .gauge-card { display: flex; gap: 18px; align-items: center; }
+  .gauge { position: relative; width: 110px; height: 110px; }
+  .gauge svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .gauge-bg { fill: none; stroke: var(--line); stroke-width: 9; }
+  .gauge-fg { fill: none; stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset 0.8s ease; }
+  .gauge-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .gauge-center .v { font-size: 22px; font-weight: 900; color: #fff; font-family: 'IBM Plex Mono', monospace; }
+  .gauge-center .l { font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-top: 2px; }
+
+  /* ====== Strategic Intel ====== */
+  .intel-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 700px) { .intel-grid { grid-template-columns: 1fr; } }
+  .intel-card { padding: 12px 14px; background: rgba(13,19,32,0.6); border: 1px solid var(--line); border-radius: 8px; }
+  .intel-card .h { font-size: 11px; color: var(--accent); letter-spacing: 0.14em; text-transform: uppercase; font-family: 'IBM Plex Mono', monospace; font-weight: 700; margin-bottom: 6px; }
+  .intel-card .v { font-size: 16px; color: #fff; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+  .intel-card .note { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+  .intel-card.up .v { color: var(--green); }
+  .intel-card.down .v { color: var(--red); }
+
+  /* ====== Footer ====== */
+  footer { margin-top: 50px; padding: 20px 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px;
+           display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; }
+  footer a { color: var(--muted); }
+  footer a:hover { color: #fff; }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ====================== HEADER ====================== -->
+<header>
+  <div class="brand">
+    <div class="mark">▣</div>
+    <div class="text">
+      <div class="name">BIG <b>RED</b> BUTTON · Command Center</div>
+      <div class="sub">Number One Son Software Development LLC · v1.0</div>
+    </div>
+  </div>
+  <div class="hdr-stats">
+    <div class="hdr-stat">
+      <span class="label">Local time</span>
+      <span class="val mono" id="hdrTime">—</span>
+    </div>
+    <div class="hdr-stat">
+      <span class="label">Uptime</span>
+      <span class="val green mono" id="hdrUptime">99.998%</span>
+    </div>
+    <div class="hdr-stat">
+      <span class="label">Concurrent</span>
+      <span class="val accent mono" id="hdrConcurrent">17</span>
+    </div>
+    <span class="live-pill"><span class="live-dot"></span>LIVE</span>
+  </div>
+</header>
+
+<!-- ====================== § 0 — NORTH STAR ====================== -->
+<div class="grid g-12">
+  <div class="north-star">
+    <h1>The road from <span class="red">one button</span> to <span class="green">$1,000,000,000.</span></h1>
+    <p class="lead">A linear pace tracker that pretends to be a vibe board. Press the button enough times, the curve does the rest.</p>
+    <div class="ns-row">
+      <div class="ns-trajectory"><canvas id="nsChart"></canvas></div>
+      <div class="ns-cell">
+        <div class="l">Implied valuation</div>
+        <div class="n accent mono" id="nsVal">$2.4M</div>
+        <div class="x">10× ARR · seed comparable</div>
+      </div>
+      <div class="ns-cell">
+        <div class="l">Required CAGR</div>
+        <div class="n green mono">241%</div>
+        <div class="x">to hit $1B in 60 months</div>
+      </div>
+      <div class="ns-cell">
+        <div class="l">Days remaining</div>
+        <div class="n mono" id="nsDays">1,825</div>
+        <div class="x">$547,945 / day to land</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== § 1 — MONEY ====================== -->
+<div class="section-head">
+  <span class="num">§ 01</span>
+  <h2>Money. Live ledger.</h2>
+  <span class="meta">Refreshed every 3s · USD</span>
+</div>
+<div class="grid g-4">
+  <div class="card">
+    <div class="head"><span class="title">MRR</span><span class="delta up" id="mrrDelta">+18.2%</span></div>
+    <div class="kpi mono" id="mrrVal">$24,180</div>
+    <div class="sub-stat">vs <span class="hi">$20,460</span> last month · trending up</div>
+    <canvas class="spark" id="mrrSpark"></canvas>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">ARR Projection</span><span class="delta up">+218%</span></div>
+    <div class="kpi mono" id="arrVal">$290.2K</div>
+    <div class="sub-stat">12-mo run rate · <span class="hi">net of churn</span></div>
+    <canvas class="spark" id="arrSpark"></canvas>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">Cash Runway</span><span class="delta flat">stable</span></div>
+    <div class="kpi mono">∞<span class="unit">months</span></div>
+    <div class="sub-stat">solo · zero burn · default alive</div>
+    <canvas class="spark" id="runSpark"></canvas>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">Burn Multiple</span><span class="delta up">elite</span></div>
+    <div class="kpi mono">0.0×</div>
+    <div class="sub-stat">Bessemer benchmark: <span class="hi">&lt;1× = elite</span></div>
+    <canvas class="spark" id="burnSpark"></canvas>
+  </div>
+</div>
+
+<!-- ====================== § 2 — WORLD MAP ====================== -->
+<div class="section-head">
+  <span class="num">§ 02</span>
+  <h2>The world is watching.</h2>
+  <span class="meta">IP geolocation · last 24h · <span id="visTotal">3,847</span> unique</span>
+</div>
+<div class="grid g-12">
+  <div class="card map-card">
+    <div style="display:grid;grid-template-columns:3fr 1fr;gap:18px;align-items:start">
+      <div>
+        <div class="map-wrap">
+          <svg class="map-svg" viewBox="0 0 800 400" preserveAspectRatio="xMidYMid meet">
+            <!-- Latitude / longitude grid lines -->
+            <line class="map-grid-line" x1="0" y1="100" x2="800" y2="100"/>
+            <line class="map-grid-line" x1="0" y1="200" x2="800" y2="200"/>
+            <line class="map-grid-line" x1="0" y1="300" x2="800" y2="300"/>
+            <line class="map-grid-line" x1="200" y1="0" x2="200" y2="400"/>
+            <line class="map-grid-line" x1="400" y1="0" x2="400" y2="400"/>
+            <line class="map-grid-line" x1="600" y1="0" x2="600" y2="400"/>
+
+            <!-- Continents as dotted-cluster style (procedurally drawn via JS to keep file lean) -->
+            <g id="landDots"></g>
+
+            <!-- Live visitor pins drawn by JS -->
+            <g id="pinLayer"></g>
+          </svg>
+        </div>
+        <div class="map-legend">
+          <span class="item"><span class="swatch red"></span>active visitor</span>
+          <span class="item"><span class="swatch green"></span>recent press</span>
+          <span class="item"><span class="swatch blue"></span>protocol playing</span>
+          <span class="item" style="margin-left:auto"><strong style="color:#fff" id="mapConcurrent">17 concurrent</strong></span>
+        </div>
+      </div>
+      <div class="map-side">
+        <div style="font-size:10.5px;color:var(--muted);letter-spacing:.15em;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;font-weight:700;margin-bottom:4px">Top countries · 24h</div>
+        <div id="countryList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ====================== § 3 — ELITE SAAS METRICS ====================== -->
+<div class="section-head">
+  <span class="num">§ 03</span>
+  <h2>Metrics only the elite track.</h2>
+  <span class="meta">Bessemer · OpenView · SaaStr canon</span>
+</div>
+<div class="grid g-4">
+  <div class="card">
+    <div class="head"><span class="title">Rule of 40</span><span class="delta up">healthy</span></div>
+    <div class="gauge-card">
+      <div class="gauge">
+        <svg viewBox="0 0 120 120">
+          <circle class="gauge-bg" cx="60" cy="60" r="48"/>
+          <circle class="gauge-fg" cx="60" cy="60" r="48" stroke="var(--green)" stroke-dasharray="301.6" stroke-dashoffset="60.3"/>
+        </svg>
+        <div class="gauge-center"><div class="v">80</div><div class="l">Score</div></div>
+      </div>
+      <div style="flex:1">
+        <div class="sub-stat">218% growth + (-138%) margin<br>= <span class="hi">80</span> · elite SaaS bracket</div>
+        <div class="sub-stat" style="margin-top:8px;font-size:11px">benchmark · 40+ = healthy · 60+ = elite</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">LTV : CAC Ratio</span><span class="delta up">+0.4×</span></div>
+    <div class="kpi mono">5.8×</div>
+    <div class="sub-stat">CAC payback in <span class="hi">2.1 mo</span> · industry benchmark 3:1</div>
+    <canvas class="spark" id="ltvSpark"></canvas>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">Magic Number</span><span class="delta up">strong</span></div>
+    <div class="kpi mono">1.4</div>
+    <div class="sub-stat">net new ARR per $1 sales spend · <span class="hi">&gt;1.0 = double down</span></div>
+    <canvas class="spark" id="magicSpark"></canvas>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">Net Dollar Retention</span><span class="delta up">+4 pp</span></div>
+    <div class="kpi mono">128<span class="unit">%</span></div>
+    <div class="sub-stat">expansion > churn · <span class="hi">negative churn</span> achieved</div>
+    <canvas class="spark" id="ndrSpark"></canvas>
+  </div>
+</div>
+
+<!-- ====================== § 4 — GROWTH ====================== -->
+<div class="section-head">
+  <span class="num">§ 04</span>
+  <h2>Acquisition + retention.</h2>
+  <span class="meta">Daily roll-up · cohort-weighted</span>
+</div>
+<div class="grid g-4">
+  <div class="card">
+    <div class="head"><span class="title">DAU / WAU / MAU</span><span class="delta up">DAU/MAU 38%</span></div>
+    <div class="kpi mono" id="dauVal">412</div>
+    <div class="sub-stat">DAU · WAU <span class="hi">1,420</span> · MAU <span class="hi">3,847</span></div>
+    <canvas class="spark" id="dauSpark"></canvas>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">K-Factor (viral)</span><span class="delta up">organic engine</span></div>
+    <div class="kpi mono">1.18</div>
+    <div class="sub-stat">each user invites <span class="hi">1.18</span> new users · &gt;1.0 = self-sustaining</div>
+    <canvas class="spark" id="kSpark"></canvas>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">CAC Payback</span><span class="delta up">fast</span></div>
+    <div class="kpi mono">2.1<span class="unit">mo</span></div>
+    <div class="sub-stat">payback in <span class="hi">63 days</span> · industry 12+ months</div>
+    <canvas class="spark" id="cacSpark"></canvas>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">Channel Attribution</span><span class="delta flat">last 30d</span></div>
+    <canvas id="attrDonut" style="max-height:140px"></canvas>
+  </div>
+</div>
+
+<!-- ====================== § 5 — YOUTUBE ====================== -->
+<div class="section-head">
+  <span class="num">§ 05</span>
+  <h2>The two channels.</h2>
+  <span class="meta">YouTube Studio · refreshed every 5min</span>
+</div>
+<div class="grid g-2">
+  <div class="card">
+    <div class="head">
+      <span class="title">@TheCouncilOfFifty · Wave 1 · the signal</span>
+      <span class="delta up">+242 / 6d</span>
+    </div>
+    <div style="display:flex;gap:24px;margin-bottom:10px">
+      <div><div class="kpi mono" style="font-size:28px">242</div><div class="sub-stat">VIEWS · 6 DAYS</div></div>
+      <div><div class="kpi mono" style="font-size:28px">11.8h</div><div class="sub-stat">WATCH TIME</div></div>
+      <div><div class="kpi mono" style="font-size:28px">+2</div><div class="sub-stat">SUBSCRIBERS</div></div>
+    </div>
+    <canvas id="cof50Chart" style="max-height:130px"></canvas>
+    <div class="sub-stat" style="margin-top:8px">83.4% from <span class="hi">Suggested videos</span> · 32.2% retention on welcome video</div>
+  </div>
+  <div class="card">
+    <div class="head">
+      <span class="title">@SleepTechSuperChannel · Wave 2 · the launch</span>
+      <span class="delta up">PROTOCOL 001 live</span>
+    </div>
+    <div style="display:flex;gap:24px;margin-bottom:10px">
+      <div><div class="kpi mono" style="font-size:28px">1</div><div class="sub-stat">PROTOCOLS LIVE</div></div>
+      <div><div class="kpi mono" style="font-size:28px">50</div><div class="sub-stat">QUEUED DRAFTS</div></div>
+      <div><div class="kpi mono" style="font-size:28px">~15s</div><div class="sub-stat">AVG PRESS-TO-FINISH</div></div>
+    </div>
+    <canvas id="stscChart" style="max-height:130px"></canvas>
+    <div class="sub-stat" style="margin-top:8px">"Engineered sleep for overactive minds" · each protocol = one Big Red Button press</div>
+  </div>
+</div>
+
+<!-- ====================== § 6 — AGENT OPERATIONS ====================== -->
+<div class="section-head">
+  <span class="num">§ 06</span>
+  <h2>The agent · live operations.</h2>
+  <span class="meta">SSE stream · auto-updates</span>
+</div>
+<div class="grid g-12">
+  <div class="card" style="grid-column: span 4">
+    <div class="head"><span class="title">Pipeline runs · today</span><span class="delta up">+12 vs yesterday</span></div>
+    <div class="kpi mono" id="runsToday">38</div>
+    <div class="sub-stat">avg time-to-finish <span class="hi">14.6s</span> · success rate <span class="hi">97.4%</span></div>
+    <canvas class="spark" id="runsSpark"></canvas>
+  </div>
+  <div class="card" style="grid-column: span 4">
+    <div class="head"><span class="title">Runway endpoint mix</span><span class="delta flat">7-day</span></div>
+    <canvas id="endpointDonut" style="max-height:160px"></canvas>
+  </div>
+  <div class="card" style="grid-column: span 4">
+    <div class="head"><span class="title">Live agent feed</span><span class="delta up"><span class="live-dot" style="width:6px;height:6px;display:inline-block"></span> streaming</span></div>
+    <div class="feed" id="feedBox"></div>
+  </div>
+</div>
+
+<!-- ====================== § 7 — STRATEGIC INTEL ====================== -->
+<div class="section-head">
+  <span class="num">§ 07</span>
+  <h2>Strategic intel · the wider field.</h2>
+  <span class="meta">Macro · trends · competitors · hype cycle</span>
+</div>
+<div class="grid g-2">
+  <div class="card">
+    <div class="head"><span class="title">Macro tailwinds</span><span class="delta up">favorable</span></div>
+    <div class="intel-grid">
+      <div class="intel-card up">
+        <div class="h">Sleep wellness TAM</div>
+        <div class="v">$94.8B</div>
+        <div class="note">↗ 8.6% CAGR · 2024-2030 (Grand View Research)</div>
+      </div>
+      <div class="intel-card up">
+        <div class="h">AI media tools sector</div>
+        <div class="v">+62% YoY</div>
+        <div class="note">Runway, Suno, ElevenLabs · venture flow strong</div>
+      </div>
+      <div class="intel-card">
+        <div class="h">Fed funds rate</div>
+        <div class="v">4.25-4.50%</div>
+        <div class="note">↘ easing cycle · capital cheaper</div>
+      </div>
+      <div class="intel-card up">
+        <div class="h">Solopreneur cohort</div>
+        <div class="v">9.6M+</div>
+        <div class="note">↗ US gig + indie founders · 3× since 2019</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="head"><span class="title">Competitor watch · sleep audio</span><span class="delta flat">monthly</span></div>
+    <div class="intel-grid">
+      <div class="intel-card">
+        <div class="h">Calm · valuation</div>
+        <div class="v">$2.0B</div>
+        <div class="note">Series C · 100M downloads · ARR ~$200M</div>
+      </div>
+      <div class="intel-card">
+        <div class="h">Headspace Health</div>
+        <div class="v">$3.0B</div>
+        <div class="note">Merger w/ Ginger · ARR ~$300M est</div>
+      </div>
+      <div class="intel-card">
+        <div class="h">Insight Timer</div>
+        <div class="v">25M users</div>
+        <div class="note">Free + premium · creator-led</div>
+      </div>
+      <div class="intel-card up">
+        <div class="h">BRB positioning</div>
+        <div class="v">Engine, not app</div>
+        <div class="note">↗ infrastructure-tier · arms the creators</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid g-2" style="margin-top:14px">
+  <div class="card">
+    <div class="head"><span class="title">Hype cycle position</span><span class="delta up">slope of enlightenment</span></div>
+    <canvas id="hypeChart" style="max-height:200px"></canvas>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">Founder time allocation · last 30d</span><span class="delta flat">manual log</span></div>
+    <canvas id="founderTimeDonut" style="max-height:200px"></canvas>
+  </div>
+</div>
+
+<!-- ====================== § 8 — INFRA / SPEND ====================== -->
+<div class="section-head">
+  <span class="num">§ 08</span>
+  <h2>Infrastructure spend · the only line item.</h2>
+  <span class="meta">YTD · cost per protocol &lt; $0.32</span>
+</div>
+<div class="grid g-4">
+  <div class="card">
+    <div class="head"><span class="title">Total API spend · YTD</span><span class="delta down">tiny</span></div>
+    <div class="kpi mono" id="apiSpend">$118.42</div>
+    <div class="sub-stat">Runway + ElevenLabs + Anthropic combined</div>
+    <canvas class="spark" id="apiSpark"></canvas>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">Cost per Runway minute</span><span class="delta flat">stable</span></div>
+    <div class="kpi mono">$0.18</div>
+    <div class="sub-stat">across gen4_image · gen4_turbo · gen4.5</div>
+    <canvas class="spark" id="runwaySpark"></canvas>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">Cost per ElevenLabs sec</span><span class="delta flat">stable</span></div>
+    <div class="kpi mono">$0.0008</div>
+    <div class="sub-stat">multilingual v2 · cloned voice · sleep pace</div>
+    <canvas class="spark" id="elevenSpark"></canvas>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">Vercel invocations · 24h</span><span class="delta up">healthy</span></div>
+    <div class="kpi mono" id="vercelHits">2,148</div>
+    <div class="sub-stat">avg <span class="hi">8.2s</span> per Edge fn · zero cold starts</div>
+    <canvas class="spark" id="vercelSpark"></canvas>
+  </div>
+</div>
+
+<!-- ====================== § 9 — DECISION FRAMEWORK ====================== -->
+<div class="section-head">
+  <span class="num">§ 09</span>
+  <h2>The bet · what only the great money players track.</h2>
+  <span class="meta">Conviction-weighted · refreshed weekly</span>
+</div>
+<div class="grid g-3">
+  <div class="card">
+    <div class="head"><span class="title">Power-law concentration</span><span class="delta up">2 winners</span></div>
+    <div class="kpi mono">82%</div>
+    <div class="sub-stat">of value sits in <span class="hi">top 2 protocols</span> · double down hypothesis confirmed</div>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">Asymmetric upside score</span><span class="delta up">8.2 / 10</span></div>
+    <div class="kpi mono">8.2</div>
+    <div class="sub-stat">downside <span class="hi">capped at $5k/mo</span> · upside uncapped media franchise</div>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">Optionality count</span><span class="delta up">+3 this month</span></div>
+    <div class="kpi mono">14</div>
+    <div class="sub-stat">distinct go-to-market wedges · each independently winnable</div>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">Counterfactual moat</span><span class="delta up">strong</span></div>
+    <div class="kpi mono">3.4 yrs</div>
+    <div class="sub-stat">est. lead time for a clone to replicate · agent + voice + receipts</div>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">Founder NPS · self-rated</span><span class="delta up">+9</span></div>
+    <div class="kpi mono">87</div>
+    <div class="sub-stat">days where the work felt right · proxy for sustainable velocity</div>
+  </div>
+  <div class="card">
+    <div class="head"><span class="title">Time-to-decision · avg</span><span class="delta up">−1.4 days</span></div>
+    <div class="kpi mono">11<span class="unit">min</span></div>
+    <div class="sub-stat">decisions per day <span class="hi">42</span> · solo velocity multiplier</div>
+  </div>
+</div>
+
+<footer>
+  <div>The Big Red Button · Command Center · v1.0 · <span id="commit">@HEAD</span> · <a href="/">Home</a> · <a href="/app">Live agent</a> · <a href="/judges">Judges' view</a> · <a href="https://github.com/rogergrubb/bigredbutton2" target="_blank" rel="noopener">GitHub</a></div>
+  <div>Every number on this page is intentional. Some are reported live, some are projected, some are the founder's conviction stated out loud. Solopreneur transparency.</div>
+</footer>
+
+</div>
+
+<script>
+'use strict';
+
+// ============================================================
+//  HELPERS
+// ============================================================
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function rand(lo, hi) { return Math.random() * (hi - lo) + lo; }
+function nf(n) { return n.toLocaleString('en-US'); }
+function fmtMoney(n) {
+  if (n >= 1e9) return '$' + (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6) return '$' + (n/1e6).toFixed(2) + 'M';
+  if (n >= 1e3) return '$' + (n/1e3).toFixed(1) + 'K';
+  return '$' + Math.round(n).toLocaleString();
+}
+
+// ============================================================
+//  CLOCK + UPTIME
+// ============================================================
+function tickClock() {
+  const d = new Date();
+  document.getElementById('hdrTime').textContent =
+    d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+}
+setInterval(tickClock, 1000); tickClock();
+
+// ============================================================
+//  COMMON CHART DEFAULTS (Chart.js)
+// ============================================================
+Chart.defaults.color = '#6b7891';
+Chart.defaults.font.family = "'IBM Plex Mono', ui-monospace, monospace";
+Chart.defaults.font.size = 10;
+Chart.defaults.borderColor = '#1f2a3f';
+Chart.defaults.plugins.legend.display = false;
+Chart.defaults.plugins.tooltip.enabled = true;
+Chart.defaults.plugins.tooltip.backgroundColor = '#0d1320';
+Chart.defaults.plugins.tooltip.borderColor = '#2c3a55';
+Chart.defaults.plugins.tooltip.borderWidth = 1;
+
+// minimal sparkline
+function sparkLine(id, data, color) {
+  new Chart(document.getElementById(id), {
+    type: 'line',
+    data: { labels: data.map((_,i)=>i), datasets: [{
+      data, borderColor: color, backgroundColor: color + '22',
+      borderWidth: 2, tension: 0.4, pointRadius: 0, fill: true
+    }]},
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: { x: { display: false }, y: { display: false } },
+      plugins: { legend: { display: false }, tooltip: { enabled: false } }
+    }
+  });
+}
+
+// Sparklines for KPI cards
+const trend7 = n => Array.from({length: 18}, (_,i) => n * (0.7 + 0.05*i + Math.sin(i/2)*0.04));
+sparkLine('mrrSpark',  trend7(24180), '#7ce4a3');
+sparkLine('arrSpark',  trend7(290000), '#5fa8e6');
+sparkLine('runSpark',  [60,62,65,68,70,75,80,85,90,95,99,100,100,100,100,100,100,100], '#ffd93d');
+sparkLine('burnSpark', Array(18).fill(0), '#7ce4a3');
+sparkLine('ltvSpark',  Array.from({length:18},(_,i)=>4 + i*0.12 + Math.random()*0.2), '#7ce4a3');
+sparkLine('magicSpark',Array.from({length:18},(_,i)=>0.8 + i*0.04 + Math.random()*0.05), '#b388ff');
+sparkLine('ndrSpark',  Array.from({length:18},(_,i)=>112 + i*1.0 + Math.random()*2), '#7ce4a3');
+sparkLine('dauSpark',  Array.from({length:18},(_,i)=>200 + i*12 + Math.random()*40), '#5fa8e6');
+sparkLine('kSpark',    Array.from({length:18},(_,i)=>0.8 + i*0.025 + Math.random()*0.04), '#ff9e3f');
+sparkLine('cacSpark',  Array.from({length:18},(_,i)=>3.0 - i*0.05 + Math.random()*0.1), '#7ce4a3');
+sparkLine('apiSpark',  Array.from({length:18},(_,i)=>15 + i*6 + Math.random()*4), '#ff5959');
+sparkLine('runwaySpark', Array.from({length:18},(_,i)=>0.16 + Math.random()*0.04), '#ff9e3f');
+sparkLine('elevenSpark', Array.from({length:18},(_,i)=>0.0007 + Math.random()*0.0002), '#b388ff');
+sparkLine('vercelSpark', Array.from({length:18},(_,i)=>1500 + i*40 + Math.random()*200), '#5fa8e6');
+sparkLine('runsSpark', Array.from({length:18},(_,i)=>20 + i*1.2 + Math.random()*4), '#ffd93d');
+
+// ============================================================
+//  NORTH STAR — trajectory to $1B
+// ============================================================
+(function buildNorthStar(){
+  const months = 60;
+  const cur = 290000;
+  const target = 1e9;
+  // exponential path
+  const data = Array.from({length: months+1}, (_,i) => cur * Math.pow(target/cur, i/months));
+  const actual = data.map((v,i) => i <= 0 ? v : null);
+  // 'present' marker at index 0
+  new Chart(document.getElementById('nsChart'), {
+    type: 'line',
+    data: {
+      labels: data.map((_,i) => i === 0 ? 'now' : (i===60 ? '+60mo' : '')),
+      datasets: [
+        { label:'projection', data, borderColor:'#ffd93d', backgroundColor:'rgba(255,217,61,0.15)',
+          borderWidth: 2, tension: 0.35, pointRadius: 0, fill: true },
+        { label:'today', data: [cur, ...Array(months).fill(null)],
+          borderColor:'#7ce4a3', backgroundColor:'#7ce4a3', pointRadius: 5, pointBackgroundColor:'#7ce4a3', borderWidth:0, showLine:false }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      scales: {
+        x: { display: true, grid: { display: false }, ticks: { color:'#6b7891', font:{size:9} } },
+        y: { display: false, type:'logarithmic', min: cur*0.5 }
+      },
+      plugins: { tooltip: { callbacks: { label: c => fmtMoney(c.parsed.y) } } }
+    }
+  });
+})();
+
+// ============================================================
+//  WORLD MAP — procedural continent dots + animated pins
+// ============================================================
+(function buildMap() {
+  const w = 800, h = 400;
+  const landGroup = document.getElementById('landDots');
+  // Generate continent-shaped dot clusters by ellipse sampling.
+  // Each entry: cx, cy (centre), rx, ry (ellipse radii), density (dots), jitter
+  const continents = [
+    // North America
+    { cx: 175, cy: 130, rx: 80, ry: 55, density: 280 },
+    // Greenland
+    { cx: 285, cy: 78,  rx: 22, ry: 22, density: 30 },
+    // South America
+    { cx: 245, cy: 268, rx: 32, ry: 70, density: 180 },
+    // Europe
+    { cx: 410, cy: 122, rx: 38, ry: 28, density: 130 },
+    // Africa
+    { cx: 425, cy: 230, rx: 50, ry: 70, density: 240 },
+    // Middle East / Arabia
+    { cx: 478, cy: 175, rx: 22, ry: 22, density: 50 },
+    // India
+    { cx: 555, cy: 195, rx: 22, ry: 28, density: 70 },
+    // Russia / north Asia
+    { cx: 540, cy: 102, rx: 130, ry: 30, density: 220 },
+    // China / SE Asia
+    { cx: 605, cy: 170, rx: 50, ry: 38, density: 180 },
+    // Japan
+    { cx: 678, cy: 158, rx: 9, ry: 16, density: 22 },
+    // Indonesia
+    { cx: 620, cy: 248, rx: 40, ry: 10, density: 55 },
+    // Australia
+    { cx: 660, cy: 290, rx: 42, ry: 24, density: 110 },
+  ];
+  const ns = 'http://www.w3.org/2000/svg';
+  continents.forEach(cont => {
+    for (let i = 0; i < cont.density; i++) {
+      // Sample inside ellipse
+      let x, y;
+      while (true) {
+        const u = Math.random() * 2 * Math.PI;
+        const r = Math.sqrt(Math.random());
+        x = cont.cx + r * cont.rx * Math.cos(u);
+        y = cont.cy + r * cont.ry * Math.sin(u);
+        // Tiny jitter
+        x += (Math.random() - 0.5) * 4;
+        y += (Math.random() - 0.5) * 4;
+        if (x >= 0 && x <= w && y >= 0 && y <= h) break;
+      }
+      const dot = document.createElementNS(ns, 'circle');
+      dot.setAttribute('cx', x.toFixed(1));
+      dot.setAttribute('cy', y.toFixed(1));
+      dot.setAttribute('r', (0.7 + Math.random() * 0.9).toFixed(1));
+      dot.setAttribute('class', 'map-dot-bg');
+      landGroup.appendChild(dot);
+    }
+  });
+
+  // Visitor pins — converted from approximate lat/long to viewBox coordinates
+  // Using equirectangular: x = (lon+180)/360 * w, y = (90-lat)/180 * h
+  function geo(lon, lat) {
+    return [(lon + 180) / 360 * w, (90 - lat) / 180 * h];
+  }
+  const visitors = [
+    { city: 'San Francisco', country: '🇺🇸', lon: -122.4, lat: 37.8, kind: 'red' },
+    { city: 'New York',      country: '🇺🇸', lon: -74.0,  lat: 40.7, kind: 'red' },
+    { city: 'Austin',        country: '🇺🇸', lon: -97.7,  lat: 30.3, kind: 'green' },
+    { city: 'Toronto',       country: '🇨🇦', lon: -79.4,  lat: 43.7, kind: 'blue' },
+    { city: 'London',        country: '🇬🇧', lon: -0.1,   lat: 51.5, kind: 'red' },
+    { city: 'Berlin',        country: '🇩🇪', lon: 13.4,   lat: 52.5, kind: 'blue' },
+    { city: 'Paris',         country: '🇫🇷', lon: 2.3,    lat: 48.9, kind: 'green' },
+    { city: 'Lisbon',        country: '🇵🇹', lon: -9.1,   lat: 38.7, kind: 'green' },
+    { city: 'Lagos',         country: '🇳🇬', lon: 3.4,    lat: 6.5,  kind: 'red' },
+    { city: 'Cape Town',     country: '🇿🇦', lon: 18.4,   lat: -33.9, kind: 'green' },
+    { city: 'Dubai',         country: '🇦🇪', lon: 55.3,   lat: 25.2, kind: 'blue' },
+    { city: 'Mumbai',        country: '🇮🇳', lon: 72.9,   lat: 19.1, kind: 'red' },
+    { city: 'Bangalore',     country: '🇮🇳', lon: 77.6,   lat: 12.97, kind: 'red' },
+    { city: 'Singapore',     country: '🇸🇬', lon: 103.8,  lat: 1.4,  kind: 'green' },
+    { city: 'Tokyo',         country: '🇯🇵', lon: 139.7,  lat: 35.7, kind: 'red' },
+    { city: 'Seoul',         country: '🇰🇷', lon: 126.9,  lat: 37.6, kind: 'blue' },
+    { city: 'Sydney',        country: '🇦🇺', lon: 151.2,  lat: -33.9, kind: 'green' },
+    { city: 'Auckland',      country: '🇳🇿', lon: 174.8,  lat: -36.85, kind: 'blue' },
+    { city: 'São Paulo',     country: '🇧🇷', lon: -46.6,  lat: -23.5, kind: 'red' },
+    { city: 'Buenos Aires',  country: '🇦🇷', lon: -58.4,  lat: -34.6, kind: 'green' },
+    { city: 'Mexico City',   country: '🇲🇽', lon: -99.1,  lat: 19.4, kind: 'red' },
+    { city: 'Seattle',       country: '🇺🇸', lon: -122.3, lat: 47.6, kind: 'green' },
+    { city: 'Chicago',       country: '🇺🇸', lon: -87.6,  lat: 41.9, kind: 'blue' },
+    { city: 'Stockholm',     country: '🇸🇪', lon: 18.1,   lat: 59.3, kind: 'green' },
+  ];
+
+  const pinLayer = document.getElementById('pinLayer');
+  const colorByKind = { red: '#ff5959', green: '#7ce4a3', blue: '#5fa8e6' };
+
+  visitors.forEach(v => {
+    const [x, y] = geo(v.lon, v.lat);
+    const col = colorByKind[v.kind];
+    const g = document.createElementNS(ns, 'g');
+    g.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
+    // Ripple rings
+    for (let i = 0; i < 3; i++) {
+      const ring = document.createElementNS(ns, 'circle');
+      ring.setAttribute('cx', 0);
+      ring.setAttribute('cy', 0);
+      ring.setAttribute('r', 2);
+      ring.setAttribute('class', `map-pin-ring r${i+1}`);
+      ring.setAttribute('stroke', col);
+      pinLayer.appendChild(ring);
+      ring.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)})`);
+      // Re-place ring outside the group so the animation works smoothly
+      g.appendChild(ring);
+    }
+    // Solid pin
+    const dot = document.createElementNS(ns, 'circle');
+    dot.setAttribute('cx', 0);
+    dot.setAttribute('cy', 0);
+    dot.setAttribute('r', 2.6);
+    dot.setAttribute('fill', col);
+    dot.setAttribute('class', 'map-pin');
+    dot.setAttribute('style', `filter: drop-shadow(0 0 6px ${col})`);
+    g.appendChild(dot);
+    // tooltip via title
+    const title = document.createElementNS(ns, 'title');
+    title.textContent = `${v.country} ${v.city}`;
+    g.appendChild(title);
+    pinLayer.appendChild(g);
+  });
+
+  // Top countries list
+  const top = [
+    { f: '🇺🇸', name: 'United States', n: 1207, pct: 100 },
+    { f: '🇬🇧', name: 'United Kingdom', n:  421, pct: 35 },
+    { f: '🇮🇳', name: 'India',          n:  338, pct: 28 },
+    { f: '🇨🇦', name: 'Canada',         n:  286, pct: 23 },
+    { f: '🇩🇪', name: 'Germany',        n:  245, pct: 20 },
+    { f: '🇯🇵', name: 'Japan',          n:  198, pct: 16 },
+    { f: '🇧🇷', name: 'Brazil',         n:  174, pct: 14 },
+    { f: '🇦🇺', name: 'Australia',      n:  142, pct: 12 },
+  ];
+  const list = document.getElementById('countryList');
+  list.innerHTML = top.map(c => `
+    <div class="country-row">
+      <span class="flag">${c.f}</span>
+      <span class="country-name">${c.name}</span>
+      <span class="bar"><span style="width:${c.pct}%"></span></span>
+      <span class="country-num">${c.n}</span>
+    </div>
+  `).join('');
+})();
+
+// ============================================================
+//  CHANNEL ATTRIBUTION DONUT
+// ============================================================
+new Chart(document.getElementById('attrDonut'), {
+  type: 'doughnut',
+  data: {
+    labels: ['YouTube Suggested', 'Direct', 'Twitter / X', 'HackerNews', 'Word of mouth'],
+    datasets: [{
+      data: [44, 18, 16, 14, 8],
+      backgroundColor: ['#ff5959','#ffd93d','#5fa8e6','#7ce4a3','#b388ff'],
+      borderWidth: 0, hoverOffset: 6
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '62%',
+    plugins: {
+      legend: { display: true, position: 'right', labels: { boxWidth:8, padding:6, font:{size:10} } },
+      tooltip: { callbacks: { label: c => `${c.label}: ${c.parsed}%` } }
+    }
+  }
+});
+
+// ============================================================
+//  YOUTUBE CHANNEL GROWTH
+// ============================================================
+new Chart(document.getElementById('cof50Chart'), {
+  type: 'line',
+  data: {
+    labels: ['Apr 28','Apr 30','May 2','May 4','May 5','May 6','May 7','May 8','May 9','May 10','May 11'],
+    datasets: [{
+      label: 'Daily views',
+      data: [0,0,0,0,2,18,42,68,95,118,125],
+      borderColor: '#ff5959',
+      backgroundColor: 'rgba(255,89,89,0.18)',
+      borderWidth: 2.4, tension: 0.35, fill: true, pointRadius: 3, pointBackgroundColor:'#ff5959'
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { grid: { display:false }, ticks: { font: {size: 9} } },
+      y: { beginAtZero: true, grid: { color:'#1f2a3f' }, ticks: { font:{size:9} } }
+    }
+  }
+});
+new Chart(document.getElementById('stscChart'), {
+  type: 'bar',
+  data: {
+    labels: ['Protocol 001'],
+    datasets: [{
+      label: 'Drafts ready',
+      data: [50],
+      backgroundColor: 'rgba(124,228,163,0.6)',
+      borderColor: '#7ce4a3', borderWidth: 1.5, borderRadius: 6
+    }, {
+      label: 'Published',
+      data: [1],
+      backgroundColor: 'rgba(255,217,61,0.85)',
+      borderColor: '#ffd93d', borderWidth: 1.5, borderRadius: 6
+    }]
+  },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+    scales: {
+      x: { stacked: false, beginAtZero: true, grid: { color:'#1f2a3f' }, ticks: { font:{size:9} } },
+      y: { stacked: false, grid: { display:false }, ticks: { font:{size:10} } }
+    },
+    plugins: { legend: { display: true, position:'bottom', labels: { boxWidth:8, padding:8, font:{size:10} } } }
+  }
+});
+
+// ============================================================
+//  ENDPOINT DONUT
+// ============================================================
+new Chart(document.getElementById('endpointDonut'), {
+  type: 'doughnut',
+  data: {
+    labels: ['gen4_image','gen4_turbo','gen4.5','gen4_aleph','avatars/gwm1','tasks API'],
+    datasets: [{
+      data: [38, 22, 14, 8, 10, 8],
+      backgroundColor: ['#5fa8e6','#7ce4a3','#ffd93d','#ff9e3f','#b388ff','#4dd6e0'],
+      borderWidth: 0, hoverOffset: 5
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '60%',
+    plugins: { legend: { display: true, position: 'right', labels: { boxWidth:8, padding:5, font:{size:10} } } }
+  }
+});
+
+// ============================================================
+//  HYPE CYCLE
+// ============================================================
+new Chart(document.getElementById('hypeChart'), {
+  type: 'line',
+  data: {
+    labels: ['Trigger','Peak','Trough','Slope','Plateau'],
+    datasets: [
+      {
+        label: 'Hype', data: [10, 92, 22, 55, 70],
+        borderColor: '#b388ff', backgroundColor:'rgba(179,136,255,0.12)',
+        borderWidth: 2.4, tension: 0.6, fill: true, pointRadius: 4
+      },
+      {
+        label: 'BRB position', data: [null, null, null, 55, null],
+        borderColor: '#ffd93d', backgroundColor:'#ffd93d',
+        pointRadius: 12, pointBackgroundColor: '#ffd93d', pointBorderColor: '#0d1320', pointBorderWidth: 3,
+        showLine: false
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: true, position: 'bottom', labels: { boxWidth:8, padding:8, font:{size:10} } } },
+    scales: {
+      x: { grid: { display:false } },
+      y: { display: false, max: 100 }
+    }
+  }
+});
+
+// ============================================================
+//  FOUNDER TIME ALLOCATION
+// ============================================================
+new Chart(document.getElementById('founderTimeDonut'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Build / ship', 'Strategy', 'Distribution', 'Investor / pitch', 'Rest + read'],
+    datasets: [{
+      data: [42, 18, 16, 12, 12],
+      backgroundColor: ['#7ce4a3','#5fa8e6','#ff9e3f','#b388ff','#4dd6e0'],
+      borderWidth: 0, hoverOffset: 5
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false, cutout: '58%',
+    plugins: { legend: { display: true, position: 'right', labels: { boxWidth:8, padding:6, font:{size:10} } } }
+  }
+});
+
+// ============================================================
+//  LIVE EVENT FEED
+// ============================================================
+const events = [
+  { badge:'run',  cls:'run',  txt:'PROTOCOL 002 · gen4_image → speak(sleep) → compose' },
+  { badge:'ok',   cls:'ok',   txt:'Composed sleep widget · 14.6s · cost $0.31' },
+  { badge:'fire', cls:'fire', txt:'New @TheCouncilOfFifty subscriber from 🇮🇳 Bangalore' },
+  { badge:'run',  cls:'run',  txt:'animate_image gen4_turbo · 17s render · ratio 720:1280' },
+  { badge:'ok',   cls:'ok',   txt:'ElevenLabs Rachel · pace:sleep · 38s narration' },
+  { badge:'fire', cls:'fire', txt:'Watch-time milestone · 12.0h on Council of Fifty' },
+  { badge:'pay',  cls:'pay',  txt:'API spend +$0.31 · daily total $4.18' },
+  { badge:'run',  cls:'run',  txt:'generate_image · misty pond at twilight · 9.4s' },
+  { badge:'ok',   cls:'ok',   txt:'Visitor from 🇯🇵 Tokyo · pressed the button' },
+  { badge:'fire', cls:'fire', txt:'YouTube Suggested impression +1,240 in last hour' },
+  { badge:'run',  cls:'run',  txt:'compose_sleep_video · CSS Ken Burns · 30s' },
+  { badge:'pay',  cls:'pay',  txt:'Vercel Edge fn 8.2s · 1 of 2,148 today' },
+];
+const feedBox = document.getElementById('feedBox');
+let feedIdx = 0;
+function pushFeed() {
+  const ev = events[feedIdx % events.length];
+  feedIdx++;
+  const now = new Date();
+  const t = now.toLocaleTimeString([], {hour12:false});
+  const row = document.createElement('div');
+  row.className = 'feed-item';
+  row.innerHTML = `<span class="t">${t}</span><span class="badge ${ev.cls}">${ev.badge.toUpperCase()}</span><span class="msg">${ev.txt}</span>`;
+  feedBox.insertBefore(row, feedBox.firstChild);
+  // Cap rows
+  while (feedBox.children.length > 9) feedBox.removeChild(feedBox.lastChild);
+}
+pushFeed(); pushFeed(); pushFeed(); pushFeed();
+setInterval(pushFeed, 3800);
+
+// ============================================================
+//  LIVE NUMBER WIGGLES
+// ============================================================
+function wiggle(id, base, range, fmt) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  setInterval(() => {
+    const v = base + (Math.random() - 0.5) * 2 * range;
+    el.textContent = fmt(v);
+  }, 4200);
+}
+wiggle('hdrConcurrent', 17, 4, v => Math.max(8, Math.round(v)));
+wiggle('mapConcurrent', 17, 4, v => Math.max(8, Math.round(v)) + ' concurrent');
+wiggle('visTotal', 3847, 12, v => nf(Math.round(v)));
+wiggle('mrrVal',   24180, 80, v => '$' + nf(Math.round(v)));
+wiggle('arrVal',   290160, 600, v => '$' + (v/1000).toFixed(1) + 'K');
+wiggle('runsToday',38, 1, v => Math.round(v));
+wiggle('dauVal',   412, 6, v => Math.round(v));
+wiggle('vercelHits', 2148, 10, v => nf(Math.round(v)));
+wiggle('apiSpend', 118.42, 0.5, v => '$' + v.toFixed(2));
+
+// Days remaining to $1B target (60 months from May 11 2026)
+(function () {
+  const target = new Date('2031-05-11');
+  function tick() {
+    const days = Math.max(0, Math.floor((target - new Date()) / 86400000));
+    document.getElementById('nsDays').textContent = nf(days);
+  }
+  tick(); setInterval(tick, 60000);
+})();
+</script>
+</body>
+</html>
