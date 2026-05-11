@@ -464,9 +464,9 @@
       <span class="delta up">+242 / 6d</span>
     </div>
     <div style="display:flex;gap:24px;margin-bottom:10px">
-      <div><div class="kpi mono" style="font-size:28px">242</div><div class="sub-stat">VIEWS · 6 DAYS</div></div>
-      <div><div class="kpi mono" style="font-size:28px">11.8h</div><div class="sub-stat">WATCH TIME</div></div>
-      <div><div class="kpi mono" style="font-size:28px">+2</div><div class="sub-stat">SUBSCRIBERS</div></div>
+      <div><div class="kpi mono" id="ytCofViews" style="font-size:28px">242</div><div class="sub-stat" id="ytCofViewsLabel">VIEWS · LIFETIME</div></div>
+      <div><div class="kpi mono" id="ytCofVideos" style="font-size:28px">91</div><div class="sub-stat">VIDEOS PUBLISHED</div></div>
+      <div><div class="kpi mono" id="ytCofSubs" style="font-size:28px">+2</div><div class="sub-stat">SUBSCRIBERS</div></div>
     </div>
     <canvas id="cof50Chart" style="max-height:130px"></canvas>
     <div class="sub-stat" style="margin-top:8px">83.4% from <span class="hi">Suggested videos</span> · 32.2% retention on welcome video</div>
@@ -477,9 +477,9 @@
       <span class="delta up">PROTOCOL 001 live</span>
     </div>
     <div style="display:flex;gap:24px;margin-bottom:10px">
-      <div><div class="kpi mono" style="font-size:28px">1</div><div class="sub-stat">PROTOCOLS LIVE</div></div>
-      <div><div class="kpi mono" style="font-size:28px">50</div><div class="sub-stat">QUEUED DRAFTS</div></div>
-      <div><div class="kpi mono" style="font-size:28px">~15s</div><div class="sub-stat">AVG PRESS-TO-FINISH</div></div>
+      <div><div class="kpi mono" id="ytStscVideos" style="font-size:28px">1</div><div class="sub-stat">PROTOCOLS LIVE</div></div>
+      <div><div class="kpi mono" id="ytStscSubs" style="font-size:28px">0</div><div class="sub-stat">SUBSCRIBERS</div></div>
+      <div><div class="kpi mono" id="ytStscViews" style="font-size:28px">0</div><div class="sub-stat">VIEWS · LIFETIME</div></div>
     </div>
     <canvas id="stscChart" style="max-height:130px"></canvas>
     <div class="sub-stat" style="margin-top:8px">"Engineered sleep for overactive minds" · each protocol = one Big Red Button press</div>
@@ -1128,6 +1128,21 @@ async function loadLiveData() {
       if (hdrUp) hdrUp.textContent = '99.998% · ' + (d.vercel.region || '') + ' · @' + d.vercel.git_sha;
       const commitEl = document.getElementById('commit');
       if (commitEl) commitEl.textContent = '@' + d.vercel.git_sha;
+    }
+    // YouTube — Council of Fifty + Sleep Tech Super Channel (live via YT_API_KEY env)
+    if (d.youtube && d.youtube.status === 'ok') {
+      const c = d.youtube.council_of_fifty;
+      if (c) {
+        const v = document.getElementById('ytCofViews');     if (v) v.textContent = (c.views ?? 0).toLocaleString();
+        const s2 = document.getElementById('ytCofSubs');      if (s2) s2.textContent = '+' + (c.subscribers ?? 0);
+        const vd = document.getElementById('ytCofVideos');    if (vd) vd.textContent = (c.videos ?? 0).toLocaleString();
+      }
+      const sl = d.youtube.sleep_tech_super;
+      if (sl) {
+        const v = document.getElementById('ytStscViews');     if (v) v.textContent = (sl.views ?? 0).toLocaleString();
+        const s2 = document.getElementById('ytStscSubs');      if (s2) s2.textContent = (sl.subscribers ?? 0).toString();
+        const vd = document.getElementById('ytStscVideos');    if (vd) vd.textContent = (sl.videos ?? 0).toString();
+      }
     }
   } catch (e) { console.warn('live data fetch failed', e); }
 }
