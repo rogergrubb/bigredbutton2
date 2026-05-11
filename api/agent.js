@@ -75,13 +75,14 @@ const TOOLS = [
   },
   {
     name: 'speak',
-    description: 'Synthesize speech in the cloned Mini-Me voice via ElevenLabs. Returns a playable audio data URL.',
+    description: 'Synthesize speech via ElevenLabs. Default voice is Rachel (neutral female narrator). Returns playable audio data URL. Use pace="sleep" for slow-tempo narration on sleep/meditation/ASMR content — automatically injects breath pauses and tightens voice settings for a calm, measured delivery.',
     input_schema: {
       type: 'object',
       properties: {
-        text:  { type: 'string' },
+        text:     { type: 'string' },
         voice_id: { type: 'string' },
-        label: { type: 'string' }
+        pace:     { type: 'string', enum: ['normal', 'slow', 'sleep', 'meditation'], description: 'normal (default) for regular speech. slow/sleep/meditation: injects pauses between sentences + uses calmer voice settings. MANDATORY for any sleep-channel / meditation / ASMR / bedtime-story narration.' },
+        label:    { type: 'string' }
       },
       required: ['text']
     }
@@ -300,6 +301,7 @@ Style:
 - For character continuity: ALWAYS use gen4_image_turbo with 2-3 referenceImages (face + style sheet). Identity drift kills shorts more than any single bad frame.
 - The Aleph finishing pass is the cinematic unlock most amateurs skip. After gen4.5 motion, use gen4_aleph with a reference image carrying the target grade to relight/color the clip: "Re-light the video using the lighting from the image" or "Restyle the video using the color grade from the image. Preserve all motion."
 - For lip-synced character dialogue: prefer character_performance (Act-Two — drive with a webcam recording of someone reading the line) over avatar_videos (audio-only gwm1) — Act-Two gets dramatically better mouth fidelity. Use avatar_videos only for talking-head/TV-anchor framing where no driving performance is available.
+- SLEEP / MEDITATION / ASMR / BEDTIME NARRATION — MANDATORY: when generating voiceover for any sleep-channel video, guided meditation, ASMR, bedtime story, or any calming/relaxation content, ALWAYS pass pace:"sleep" to the speak tool. This injects natural breath pauses between sentences and uses calmer voice settings (higher stability, zero style) so the narrator delivers a slow, measured cadence appropriate for falling asleep. Never use default pace for sleep content — the standard pace reads as too peppy and breaks the spell.
 - For HTML: modern minimalist design, inline CSS, no external deps unless from a CDN, mobile-friendly.
 - For research: web_search first, then write_text with citations as numbered footnotes [1], [2]…
 - For voice: \`speak\` calls Mini-Me's cloned voice. Keep each clip < 600 chars.
@@ -432,9 +434,22 @@ async function toolAnimateImage({ image_url, prompt, duration = 5, ratio = '720:
   return { taskId: created.id, duration, prompt, model, pending: true };
 }
 
-async function toolSpeak({ text, voice_id }) {
+async function toolSpeak({ text, voice_id, pace }) {
   requireKey('ELEVENLABS_API_KEY');
   const vid = voice_id || DEFAULT_VOICE;
+  // pace control — for sleep/meditation/asmr narration, slow the delivery
+  const isSlow = pace === 'slow' || pace === 'sleep' || pace === 'meditation';
+  let processedText = text;
+  let voiceSettings = { stability: 0.65, similarity_boost: 0.85, style: 0.15, use_speaker_boost: true };
+  if (isSlow) {
+    // 1) Inject pauses after sentence-ending punctuation. The "..." pattern reads as natural breath in ElevenLabs.
+    processedText = text
+      .replace(/([.!?])\s+/g, '$1 ... ')
+      .replace(/,\s+/g, ', ... ')
+      .replace(/—/g, ' ... — ... ');
+    // 2) Voice settings: higher stability (less variation), zero style (no excitement), keeps it measured.
+    voiceSettings = { stability: 0.85, similarity_boost: 0.90, style: 0.0, use_speaker_boost: true };
+  }
   const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${vid}`, {
     method: 'POST',
     headers: {
@@ -443,9 +458,9 @@ async function toolSpeak({ text, voice_id }) {
       'Accept': 'audio/mpeg',
     },
     body: JSON.stringify({
-      text,
+      text: processedText,
       model_id: 'eleven_multilingual_v2',
-      voice_settings: { stability: 0.65, similarity_boost: 0.85, style: 0.15, use_speaker_boost: true },
+      voice_settings: voiceSettings,
     }),
   });
   if (!r.ok) {
@@ -744,9 +759,9 @@ async function runTool(name, input) {
     };
   }
   if (name === 'speak') {
-    const { url, bytes } = await toolSpeak(input);
+    const { url, bytes } = await toolSpeak({ text: input.text, voice_id: input.voice_id, pace: input.pace });
     return {
-      forModel: `Voice clip generated (${bytes} bytes mp3).`,
+      forModel: `Voice clip generated (${bytes} bytes mp3${input.pace ? ', pace=' + input.pace : ''}).`,
       forUI: { kind: 'audio', url, label: input.label || 'Voice', text: input.text },
     };
   }
@@ -1004,7 +1019,7 @@ const SKILLS = {
 
   build_channel_strategy: 'A solo founder wants to launch around this signal: %TOPIC%. Build them a complete YouTube channel strategy as a single HTML page (write_html). Include: channel name + tagline + brand positioning, full visual identity (3-color palette + font pairing + logo concept SVG), playlist taxonomy with at least 4 distinct series, naming convention (e.g., PROTOCOL N, EPISODE N), 10 video concepts spanning short-form and long-form, a 30-day upload calendar with specific dates and titles, and a multilingual rollout plan. Make it cinematic, modern, dark mode, premium tech aesthetic. The whole thing should look like a launch brief a $1B founder would commission from a top agency.',
 
-  generate_protocol: 'A solo founder wants the next protocol video for: %TOPIC%. Build the complete production package: (1) call generate_image to create a cinematic hero still for the protocol cover/thumbnail, (2) call animate_image to produce a slow ethereal motion clip from the still, (3) call speak to render a 30-60 second guided shutdown narration intro in Mini-Me voice, (4) use write_text to output the full 7-minute script, video title (with PROTOCOL N convention), description with timestamps, 8 SEO tags, and YouTube upload instructions. The aesthetic must be premium sleep-tech: dark, calming, engineered for overactive minds.',
+  generate_protocol: 'A solo founder wants the next protocol video for: %TOPIC%. Build the complete production package: (1) call generate_image with MCSLA structure to create a cinematic hero still for the protocol cover/thumbnail, (2) call animate_image with model:gen4.5 and a MOTION-ONLY prompt (slow ethereal drift, gentle camera push, no re-description of the still) to produce the motion clip, (3) call speak with pace:"sleep" — MANDATORY for slow-tempo guided shutdown narration intro (default Rachel voice or specify), (4) use write_text to output the full 7-minute script, video title (with PROTOCOL N convention), description with timestamps, 8 SEO tags, and YouTube upload instructions. The aesthetic must be premium sleep-tech: dark, calming, engineered for overactive minds. Narrator MUST be slow tempo — pace:"sleep" is non-negotiable.',
 
   thumbnail_pack: 'A solo founder needs YouTube thumbnails for: %TOPIC%. Call generate_image FOUR times to produce 4 distinct thumbnail concepts at 1280:720 ratio. Each thumbnail prompt should be cinematic, premium, attention-grabbing in YouTube grid view, and tonally consistent with sleep-tech / engineered-calm aesthetic. After all four images render, write_text a one-paragraph brief explaining which thumbnail tests strongest and why.',
 
