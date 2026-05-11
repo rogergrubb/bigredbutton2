@@ -755,7 +755,7 @@ async function runTool(name, input) {
     }
     return {
       forModel: `animate_image task started. taskId=${r.taskId} (model=${r.model}). Use poll_task with task_id="${r.taskId}" in 30-90s to retrieve the MP4.`,
-      forUI: { kind: 'text', text: `Motion clip pending. task_id=${r.taskId}. Use poll_task tool to fetch the MP4 (30-180s).`, label: input.label || 'Motion clip pending', taskId: r.taskId },
+      forUI: { kind: 'text', text: `Motion clip pending. task_id=${r.taskId}. Use poll_task tool to fetch the MP4 (30-180s).`, label: input.label || 'Motion clip pending', taskId: r.taskId, requestId: r.taskId, pendingKind: 'animate_image' },
     };
   }
   if (name === 'speak') {

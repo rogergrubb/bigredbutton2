@@ -207,7 +207,7 @@
     <span id="pendingBannerCount">0 renders in flight</span>
     <span id="pendingBannerDetail" style="opacity:0.85;font-weight:400;font-size:13px"></span>
   </div>
-  <button id="pendingBannerToggle" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);color:white;padding:6px 14px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600">VIEW ALL</button>
+  <div style="display:flex;gap:8px"><button id="pendingBannerToggle" style="background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.4);color:white;padding:6px 14px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600">VIEW ALL</button><button id="pendingBannerClear" style="background:transparent;border:1px solid rgba(255,255,255,0.4);color:rgba(255,255,255,0.85);padding:6px 12px;border-radius:6px;cursor:pointer;font-family:inherit;font-size:12px">CLEAR ALL</button></div>
 </div>
 <div id="pendingDrawer" style="display:none;position:sticky;top:48px;left:0;right:0;z-index:9998;background:#1a0a14;border-bottom:2px solid #ff6b35;padding:14px 24px;max-height:240px;overflow-y:auto">
   <div id="pendingRenders" style="display:flex;flex-direction:column;gap:8px"></div>
@@ -390,7 +390,7 @@ function addPending(item){
   if (!item || !item.requestId) return;
   const items = loadPending();
   if (items.find(x => x.requestId === item.requestId)) return;
-  items.unshift({ requestId: item.requestId, label: item.label || "Cinematic clip", submittedAt: Date.now(), kind: "cinematic_video" });
+  items.unshift({ requestId: item.requestId, label: item.label || "Pending clip", submittedAt: Date.now(), kind: item.kind || "cinematic_video" });
   savePending(items);
   renderPending();
 }
@@ -431,9 +431,14 @@ function renderPending(){
   }
 }
 async function fetchPending(rid){
-  // Synthesize an EXEC: cinematic_video_poll call to retrieve the latest status
   toast("Polling " + rid.slice(0,8) + "…");
-  const exec = "EXEC: " + JSON.stringify({tool:"cinematic_video_poll", input:{request_id: rid, label:"Pending fetch " + rid.slice(0,8)}});
+  // Pick the right poll tool by item kind
+  const items = loadPending();
+  const it = items.find(x => x.requestId === rid);
+  const isAnimate = it && (it.kind === 'animate_image');
+  const exec = isAnimate
+    ? "EXEC: " + JSON.stringify({tool:"poll_task", input:{task_id: rid, label:"Pending fetch " + rid.slice(0,8)}})
+    : "EXEC: " + JSON.stringify({tool:"cinematic_video_poll", input:{request_id: rid, label:"Pending fetch " + rid.slice(0,8)}});
   await runAgent({ inlinePrompt: exec, isFollowup: false });
   // After SSE done, if a video came in, the gallery + results captured it. Remove from pending only if completed.
   // We re-check by scanning the most recent gallery item.
@@ -454,6 +459,14 @@ setTimeout(() => {
   function toggleDrawer(e){ if (e) e.stopPropagation(); if (!drawer) return; drawer.style.display = (drawer.style.display === 'block') ? 'none' : 'block'; }
   if (banner) banner.addEventListener('click', toggleDrawer);
   if (toggle) toggle.addEventListener('click', toggleDrawer);
+  const clearBtn = document.getElementById('pendingBannerClear');
+  if (clearBtn) clearBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!confirm('Clear all pending render entries? (Tasks already submitted to Runway/fal.ai will continue but you won\'t be able to retrieve them from here.)')) return;
+    localStorage.setItem(PENDING_KEY, '[]');
+    renderPending();
+    toast('Pending list cleared');
+  });
 }, 200);
 
 // === Gas gauge — fal.ai balance tracking + judge fallback ===
@@ -586,6 +599,9 @@ function clearActiveTool(){
   if (__activeToolTicker) { clearInterval(__activeToolTicker); __activeToolTicker = null; }
   __activeToolStart = null; __activeToolName = null;
   activeToolEl.style.display = "none";
+  // Clear text too so a future re-show doesn't flash stale content
+  if (activeToolNameEl) activeToolNameEl.textContent = '';
+  if (activeToolElapsedEl) activeToolElapsedEl.textContent = '';
 }
 
 const toastEl = $("#toast");
@@ -770,8 +786,8 @@ function handleEvent(event, payload){
   if (event === "tool_result") {
     if (payload.kind === "plan") { pushPlan(payload.steps || []); ev("plan", "Plan: " + (payload.steps || []).join(" → ")); return; }
     if (payload.kind === "search") { pushSources(payload.results || []); ev("ok", payload.results.length + " sources"); return; }
-    // Capture pending Seedance renders so user can re-fetch later
-    if (payload.requestId) addPending({ requestId: payload.requestId, label: payload.label });
+    // Capture pending renders (Seedance OR Runway animate_image) so user can re-fetch later
+    if (payload.requestId) addPending({ requestId: payload.requestId, label: payload.label, kind: payload.pendingKind });
     const node = renderResultBox(payload);
     results.appendChild(node);
     node.scrollIntoView({behavior:"smooth", block:"nearest"});
