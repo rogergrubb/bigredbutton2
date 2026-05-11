@@ -74,6 +74,21 @@ const TOOLS = [
     }
   },
   {
+    name: 'compose_sleep_video',
+    description: 'Final-mix step for sleep / meditation videos. Takes a motion clip URL + narration audio URL and emits a synced HTML5 player widget that plays them together in the gallery, extending the visual via ping-pong loop to match the audio length. Use this as the LAST step of any sleep-channel pipeline so the user gets one finished playable piece rather than three separate artifacts. The widget plays exactly like a finished MP4 in the browser — the agent never has to leave the page.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        video_url:    { type: 'string', description: 'HTTPS URL of the motion clip (e.g. from animate_image poll).' },
+        audio_url:    { type: 'string', description: 'HTTPS URL of the narration audio (e.g. from speak — must be HTTPS, not data:).' },
+        title:        { type: 'string', description: 'Display title shown above the player.' },
+        target_duration: { type: 'number', description: 'How long to extend the visual via ping-pong loop (default 30s).' },
+        label:        { type: 'string' }
+      },
+      required: ['video_url', 'audio_url']
+    }
+  },
+  {
     name: 'speak',
     description: 'Synthesize speech via ElevenLabs. Default voice is Rachel (neutral female narrator). Returns playable audio data URL. Use pace="sleep" for slow-tempo narration on sleep/meditation/ASMR content — automatically injects breath pauses and tightens voice settings for a calm, measured delivery.',
     input_schema: {
@@ -302,6 +317,7 @@ Style:
 - The Aleph finishing pass is the cinematic unlock most amateurs skip. After gen4.5 motion, use gen4_aleph with a reference image carrying the target grade to relight/color the clip: "Re-light the video using the lighting from the image" or "Restyle the video using the color grade from the image. Preserve all motion."
 - For lip-synced character dialogue: prefer character_performance (Act-Two — drive with a webcam recording of someone reading the line) over avatar_videos (audio-only gwm1) — Act-Two gets dramatically better mouth fidelity. Use avatar_videos only for talking-head/TV-anchor framing where no driving performance is available.
 - SLEEP / MEDITATION / ASMR / BEDTIME NARRATION — MANDATORY: when generating voiceover for any sleep-channel video, guided meditation, ASMR, bedtime story, or any calming/relaxation content, ALWAYS pass pace:"sleep" to the speak tool. This injects natural breath pauses between sentences and uses calmer voice settings (higher stability, zero style) so the narrator delivers a slow, measured cadence appropriate for falling asleep. Never use default pace for sleep content — the standard pace reads as too peppy and breaks the spell.
+- SLEEP VIDEO ASSEMBLY — MANDATORY FINAL STEP: every sleep-channel video MUST end with a compose_sleep_video call that combines the motion clip URL (from animate_image poll) and the narration audio URL into ONE playable widget. Without this step the user is left with three separate artifacts (still, motion clip, audio) and has to manually mux them. ALWAYS run: generate_image → animate_image → speak(pace:"sleep") → poll the animation → compose_sleep_video with the motion URL + narration URL. Default target_duration is 30 seconds.
 - For HTML: modern minimalist design, inline CSS, no external deps unless from a CDN, mobile-friendly.
 - For research: web_search first, then write_text with citations as numbered footnotes [1], [2]…
 - For voice: \`speak\` calls Mini-Me's cloned voice. Keep each clip < 600 chars.
@@ -992,6 +1008,17 @@ async function runTool(name, input) {
       forUI: { kind: 'text', text: summary || 'No avatars found.', label: 'Runway avatars', avatars: items },
     };
   }
+  if (name === 'compose_sleep_video') {
+    const { video_url, audio_url, title, target_duration, label } = input;
+    if (!video_url || !audio_url) throw new Error('compose_sleep_video requires video_url and audio_url.');
+    const dur = target_duration || 30;
+    const safeTitle = (title || 'Sleep video').replace(/[<>"&]/g, '');
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>${safeTitle}</title><style>html,body{margin:0;background:#000;color:#fff;font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh}h2{font-size:14px;letter-spacing:.15em;text-transform:uppercase;opacity:.6;margin:18px 0 12px}.frame{position:relative;max-width:380px;width:90vw;aspect-ratio:9/16;border-radius:16px;overflow:hidden;background:#000;box-shadow:0 30px 80px -10px rgba(0,0,0,.9)}video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}.ctl{margin-top:18px;display:flex;gap:10px}button{background:#ff5959;color:#fff;border:none;padding:12px 24px;border-radius:50px;font-weight:700;cursor:pointer;font-size:14px;letter-spacing:.04em}button.ghost{background:transparent;border:1px solid #444;color:#aaa}.meta{margin-top:14px;opacity:.5;font-size:11px;font-family:monospace}</style></head><body><h2>${safeTitle}</h2><div class="frame"><video id="v" src="${video_url}" muted playsinline></video><audio id="a" src="${audio_url}" preload="auto"></audio></div><div class="ctl"><button id="play">▶ PLAY</button><button id="restart" class="ghost">↻ Restart</button></div><div class="meta">Runway gen4.5 motion · ElevenLabs sleep narration · ${dur}s composed</div><script>(function(){const v=document.getElementById('v'),a=document.getElementById('a'),target=${dur};let dir=1,started=false;function start(){if(started)return;started=true;a.currentTime=0;v.currentTime=0;v.play();a.play();}function bothEnded(){v.pause();a.pause();started=false;document.getElementById('play').textContent='▶ REPLAY';}v.addEventListener('timeupdate',()=>{const d=v.duration||10;if(dir>0&&v.currentTime>=d-0.05){dir=-1;v.playbackRate=1;requestPingPong();}else if(dir<0&&v.currentTime<=0.05){dir=1;v.playbackRate=1;v.play();}});function requestPingPong(){let lt=v.currentTime;function step(){if(!started)return;lt-=1/30;if(lt<=0){dir=1;v.currentTime=0;v.play();return;}v.currentTime=lt;requestAnimationFrame(step);}step();}a.addEventListener('ended',()=>{bothEnded();});document.getElementById('play').addEventListener('click',start);document.getElementById('restart').addEventListener('click',()=>{started=false;dir=1;a.pause();v.pause();start();});})();<\/script></body></html>`;
+    return {
+      forModel: `Sleep video composed. Synced ${video_url.slice(0, 60)}... + ${audio_url.slice(0, 60)}... in HTML widget. The user can now play it as one piece.`,
+      forUI: { kind: 'html', html, label: label || (title || 'Sleep video — composed') },
+    };
+  }
   throw new Error(`Unknown tool: ${name}`);
 }
 
@@ -1019,7 +1046,7 @@ const SKILLS = {
 
   build_channel_strategy: 'A solo founder wants to launch around this signal: %TOPIC%. Build them a complete YouTube channel strategy as a single HTML page (write_html). Include: channel name + tagline + brand positioning, full visual identity (3-color palette + font pairing + logo concept SVG), playlist taxonomy with at least 4 distinct series, naming convention (e.g., PROTOCOL N, EPISODE N), 10 video concepts spanning short-form and long-form, a 30-day upload calendar with specific dates and titles, and a multilingual rollout plan. Make it cinematic, modern, dark mode, premium tech aesthetic. The whole thing should look like a launch brief a $1B founder would commission from a top agency.',
 
-  generate_protocol: 'A solo founder wants the next protocol video for: %TOPIC%. Build the complete production package: (1) call generate_image with MCSLA structure to create a cinematic hero still for the protocol cover/thumbnail, (2) call animate_image with model:gen4.5 and a MOTION-ONLY prompt (slow ethereal drift, gentle camera push, no re-description of the still) to produce the motion clip, (3) call speak with pace:"sleep" — MANDATORY for slow-tempo guided shutdown narration intro (default Rachel voice or specify), (4) use write_text to output the full 7-minute script, video title (with PROTOCOL N convention), description with timestamps, 8 SEO tags, and YouTube upload instructions. The aesthetic must be premium sleep-tech: dark, calming, engineered for overactive minds. Narrator MUST be slow tempo — pace:"sleep" is non-negotiable.',
+  generate_protocol: 'A solo founder wants the next protocol video for: %TOPIC%. Build the complete production package: (1) generate_image with MCSLA structure for the cinematic hero still, (2) animate_image with model:gen4.5 and a MOTION-ONLY prompt (slow ethereal drift, ambient camera push, no re-description of the still), (3) speak with pace:"sleep" — MANDATORY slow-tempo narration, (4) poll_task to retrieve the finished motion clip URL, (5) compose_sleep_video — MANDATORY FINAL STEP — synchronizes the motion clip URL + narration audio URL + ping-pong loops to target_duration:30. Without step 5 the user gets unfinished artifacts. (6) write_text to output the full 7-minute script, video title (PROTOCOL N convention), description with timestamps, 8 SEO tags, and YouTube upload instructions. Sleep-tech aesthetic: dark, calming, engineered for overactive minds.',
 
   thumbnail_pack: 'A solo founder needs YouTube thumbnails for: %TOPIC%. Call generate_image FOUR times to produce 4 distinct thumbnail concepts at 1280:720 ratio. Each thumbnail prompt should be cinematic, premium, attention-grabbing in YouTube grid view, and tonally consistent with sleep-tech / engineered-calm aesthetic. After all four images render, write_text a one-paragraph brief explaining which thumbnail tests strongest and why.',
 
