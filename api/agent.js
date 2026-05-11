@@ -317,7 +317,7 @@ Style:
 - For character continuity: ALWAYS use gen4_image_turbo with 2-3 referenceImages (face + style sheet). Identity drift kills shorts more than any single bad frame.
 - The Aleph finishing pass is the cinematic unlock most amateurs skip. After gen4.5 motion, use gen4_aleph with a reference image carrying the target grade to relight/color the clip: "Re-light the video using the lighting from the image" or "Restyle the video using the color grade from the image. Preserve all motion."
 - For lip-synced character dialogue: prefer character_performance (Act-Two — drive with a webcam recording of someone reading the line) over avatar_videos (audio-only gwm1) — Act-Two gets dramatically better mouth fidelity. Use avatar_videos only for talking-head/TV-anchor framing where no driving performance is available.
-- SLEEP / MEDITATION / ASMR / BEDTIME NARRATION — MANDATORY: when generating voiceover for any sleep-channel video, guided meditation, ASMR, bedtime story, or any calming/relaxation content, ALWAYS pass pace:"sleep" to the speak tool. This injects natural breath pauses between sentences and uses calmer voice settings (higher stability, zero style) so the narrator delivers a slow, measured cadence appropriate for falling asleep. Never use default pace for sleep content — the standard pace reads as too peppy and breaks the spell.
+- SLEEP / MEDITATION / ASMR / BEDTIME NARRATION — MANDATORY (server-enforced): when generating voiceover for any sleep-channel video, guided meditation, ASMR, bedtime story, or any calming/relaxation content, ALWAYS pass pace:"sleep" to the speak tool. The server now ALSO auto-detects sleep cadence from the text itself ("close your eyes", "drift", "breathe", "whisper", etc.) and force-promotes pace to sleep when found — but explicit is better, always pass pace:"sleep" yourself. The pace:"sleep" path injects SSML breath pauses between sentences (2s sentences, 0.7s commas) AND uses speed:0.80 in voice_settings so the narrator delivers a slow, measured cadence appropriate for falling asleep. Never use default pace for sleep content — standard pace is too peppy and breaks the spell. Voice is forced to Rachel (calm female narrator) for sleep pace regardless of env default.
 - VERBATIM USER SCRIPT — HARD RULE, NO EXCEPTIONS: if the user's prompt contains any quoted speech attributed to a narrator, character, or speaker (text inside double quotes, single quotes, smart quotes, or following the patterns "narrator says:", "she says:", "voiceover:", "He responds:", etc.), you MUST pass that EXACT text as the \`text\` argument to speak (and to any character dialogue field). Do not paraphrase. Do not expand. Do not "improve". Do not append your own monologue before or after. Do not invent a "Protocol N" framing on top of the user's words. The user wrote that line on purpose; substituting your own creative writing for it is a correctness failure, not a style choice. ONLY when the user's prompt contains NO quoted script may you write narration yourself — and even then, keep it to the topic and mood the user named, not a generic founder-protocol template.
 - SLEEP VIDEO ASSEMBLY — ATOMIC ONE-PUSH PIPELINE: every sleep-channel video MUST run as generate_image → speak(pace:"sleep") → compose_sleep_video with the STILL image_url + the narration audio_url. Total runtime ~15 seconds, finishes in one Edge call, zero queue. compose_sleep_video applies CSS Ken Burns motion to the still — slow zoom + drift over the narration length — which gives a dreamy sleep-video feel WITHOUT needing Runway video synthesis at all. Default target_duration is 30 seconds. DO NOT call animate_image for sleep content. The Runway video path (animate_image → poll → compose with video_url) only fits within Edge budget for VERY short clips and is not worth the risk of queueing. Stills + Ken Burns is the way.
 - ONE-PUSH = FINISHED PRODUCT — HARD RULE: NEVER queue, NEVER hand off to "Pending Renders", NEVER end a sleep-channel run before compose_sleep_video has been called with the final motion URL + narration URL. If animate_image returns a pending taskId, IMMEDIATELY call poll_task with that taskId; if still pending, call poll_task AGAIN; keep polling until you get the finished URL, then proceed to compose. The user pressed one button — they expect one finished product back, not a queue ticket. Treat the entire pipeline as atomic.
@@ -457,6 +457,26 @@ async function toolAnimateImage({ image_url, prompt, duration = 5, ratio = '720:
 
 async function toolSpeak({ text, voice_id, pace }) {
   requireKey('ELEVENLABS_API_KEY');
+
+  // --- AUTO-DETECT SLEEP NARRATION (v0.48) ---
+  // The model sometimes forgets to pass pace:'sleep' when the prompt comes through without
+  // the generate_protocol skill wrapper. Detect sleep cadence in the actual text being
+  // narrated and force pace='sleep' unless the caller EXPLICITLY asked for pace='normal'.
+  // Phrases below are the strongest sleep / meditation signals — if any appears, narration
+  // should be slow + breath-paused regardless of what the model chose.
+  if (!pace || pace === 'auto') {
+    const t = (text || '').toLowerCase();
+    const sleepCues = [
+      'close your eyes', 'drop your shoulders', 'breathe in', 'breathe out', 'deep breath',
+      'let go', 'drift', 'soothing', 'whisper', 'drowsy', 'falling asleep', 'go to sleep',
+      'gently', 'softly', 'tonight the', 'rest now', 'release the day', 'sink into',
+      'each exhale', 'each inhale', 'guided meditation', 'sleep meditation', 'asmr',
+      'feel your', 'notice your breath', 'lullaby', 'calm your mind'
+    ];
+    const hits = sleepCues.filter(p => t.includes(p)).length;
+    if (hits >= 1) pace = 'sleep';
+  }
+
   // pace control — for sleep/meditation/asmr narration, slow the delivery
   const isSlow = pace === 'slow' || pace === 'sleep' || pace === 'meditation';
   // For sleep/meditation, force the calm Rachel narrator unless caller passed an explicit voice_id.
